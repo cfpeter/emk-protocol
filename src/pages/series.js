@@ -9,7 +9,7 @@ const SPOTS = [
   { side: "back", u: 0.53, v: 0.615, title: "Խաղաղություն", text: "Armenian for peace, said khaghaghutyun.", img: "img/print-art.webp" },
   { side: "back", u: 0.37, v: 0.745, title: "The hem print", text: "A barcode print at the hem: EMK-001 / Peace Collection.", img: "img/hem.webp" },
   { side: "front", u: 0.705, v: 0.41, title: "The woven label", text: "PEACE and سلام on the left chest, with the series barcode PCE24LDN8T004.", img: "img/label.webp" },
-  { side: "front", u: 0.645, v: 0.495, title: "The barcode", text: "Scan it further down this page to open the protocol layer.", img: "img/label-tag.webp" },
+  { side: "front", u: 0.645, v: 0.495, title: "The barcode", text: "The same code you scanned to open the protocol at the top of this page.", img: "img/label-tag.webp" },
 ];
 // where "Closer" zooms in on each side
 const FOCUS = { back: "55% 52%", front: "68% 45%" };
