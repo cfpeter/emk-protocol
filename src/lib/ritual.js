@@ -19,8 +19,14 @@ const JITTER = 14;       // px of movement that counts as "not still"
 // liquid gold: restless when you move, smooth and glowing when you are still
 const bgFrag = /* glsl */ `
   uniform vec2 uRes; uniform float uCalm; uniform float uTime; uniform float uDim; uniform float uSoft; varying vec2 vUv;
+  uniform vec2 uPtr; uniform float uPtrA; uniform float uPtrV; // the visitor's hand in the gold (before Begin)
   void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * uRes.xy) / uRes.y;
+    // the gold bends around the pointer like a hand through liquid, swirling a little; faster moves push harder
+    vec2 pd = uv - uPtr;
+    float pr = exp(-dot(pd, pd) * 5.0) * uPtrA;
+    vec2 swirl = vec2(-pd.y, pd.x);
+    uv += (pd * (0.35 + 0.6 * uPtrV) + swirl * (0.6 + 0.5 * uPtrV)) * pr;
     float c = smoothstep(0.0, 1.0, uCalm);
     float t = uTime * mix(0.32, 0.07, c);             // fast and choppy -> slow and calm
     float amp = mix(0.55, 0.32, c);
@@ -41,6 +47,7 @@ const bgFrag = /* glsl */ `
     vec3 gold = vec3(0.52, 0.39, 0.22);
     vec3 col = mix(deep, body, smoothstep(-0.6, 0.6, f));
     col += gold * crest * mix(0.55, 1.15, c);
+    col += gold * (crest * 1.1 + 0.22) * pr * (0.7 + 0.6 * uPtrV); // a warm light where the hand is
     // behind the words the gold settles down so the type always reads
     col *= mix(0.32, 1.0, smoothstep(0.02, 0.8, uDim)) * (1.0 - uSoft * 0.12);
     col *= 1.0 - dot(vUv - 0.5, vUv - 0.5) * 0.9;
@@ -168,7 +175,7 @@ export async function initRitual(root) {
     document.fonts.load("600 100px Archivo", "PEACE"),
   ]).catch(() => {});
 
-  const bgU = { uRes: { value: new THREE.Vector2(1, 1) }, uCalm: { value: 0 }, uTime: { value: 0 }, uDim: { value: 0.8 }, uSoft: { value: 0 } };
+  const bgU = { uRes: { value: new THREE.Vector2(1, 1) }, uCalm: { value: 0 }, uTime: { value: 0 }, uDim: { value: 0.8 }, uSoft: { value: 0 }, uPtr: { value: new THREE.Vector2(0, -2) }, uPtrA: { value: 0 }, uPtrV: { value: 0 } };
   const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
     uniforms: bgU, vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }", fragmentShader: bgFrag, depthTest: false,
   }));
@@ -287,6 +294,17 @@ export async function initRitual(root) {
   // ---------- loop ----------
   // frame-rate independent: every chase is damp(dt), so 60 Hz, 120 Hz and a busy phone feel the same
   const { damp } = THREE.MathUtils;
+  // before Begin the gold follows the pointer: it bends, swirls and glows where the hand is
+  const ptr = { x: 0, y: -2, tx: 0, ty: -2, a: 0, v: 0, moved: 0 };
+  const toUv = (e) => { const r = root.getBoundingClientRect(); return [(e.clientX - r.left - r.width / 2) / r.height, (r.height / 2 - (e.clientY - r.top)) / r.height]; };
+  root.addEventListener("pointermove", (e) => {
+    const [x, y] = toUv(e);
+    if (ptr.a < 0.01) { ptr.x = x; ptr.y = y; } // first touch: start right where the hand is
+    ptr.moved += Math.hypot(x - ptr.tx, y - ptr.ty);
+    ptr.tx = x; ptr.ty = y;
+  }, { passive: true });
+  root.addEventListener("pointerleave", () => { ptr.out = true; });
+  root.addEventListener("pointerenter", () => { ptr.out = false; });
   let visible = true, lastRing = -1;
   new IntersectionObserver(([en]) => { visible = en.isIntersecting; }).observe(root);
   const setRing = (v) => { if (Math.abs(v - lastRing) > 0.002) { lastRing = v; ring(v); } };
@@ -318,6 +336,12 @@ export async function initRitual(root) {
       setRing(mix);
       if (mix > 0.97) lockWord();
     }
+    // pointer in the gold: alive before Begin, fades away once the ritual starts
+    const live = phase === "boot" && !ptr.out && !reduce;
+    ptr.x = damp(ptr.x, ptr.tx, 7, dt); ptr.y = damp(ptr.y, ptr.ty, 7, dt);
+    ptr.v = damp(ptr.v, Math.min(1, ptr.moved / Math.max(dt, 0.001) * 0.35), 4, dt); ptr.moved = 0;
+    ptr.a = damp(ptr.a, live && ptr.ty > -1.5 ? 0.55 + 0.45 * ptr.v : 0, live ? 3 : 1.5, dt);
+    bgU.uPtr.value.set(ptr.x, ptr.y); bgU.uPtrA.value = ptr.a; bgU.uPtrV.value = ptr.v;
     dirty = false;
     sparkU.uTime.value = t; sparkU.uCalm.value = calm;
     bgU.uCalm.value = calm;
