@@ -59,17 +59,17 @@
     </div>
   </section>
 
-  <section class="section" aria-labelledby="box-title">
-    <div class="wrap">
-      <h2 class="head" id="box-title" data-split>It arrives in black</h2>
-      <div class="box-stage">
-        <div class="box">
-          <div class="box-face"></div>
-          <div class="box-inner"><img src="img/back-cut-fade.webp" alt="The tee inside the box" loading="lazy"><div class="box-light"></div></div>
-          <div class="box-lid" role="button" tabindex="0" aria-label="Open the box" data-lid data-cursor="Lift"><b>EMK</b></div>
-        </div>
+  <section class="unbox" aria-labelledby="box-title">
+    <div class="unbox-stage">
+      <canvas tabindex="0" role="img" aria-label="The EMK SYSTEM box. Drag up or use the arrow keys to open it." data-cursor="Lift"></canvas>
+      <div class="unbox-head">
+        <h2 class="head" id="box-title" data-split>It arrives in black</h2>
+        <p class="lead muted" data-unbox-hint>Drag up to lift the lid.</p>
       </div>
-      <p class="box-hint" data-box-hint>Drag the lid up to open it.</p>
+      <div class="unbox-actions">
+        <button class="btn" type="button" data-unbox-open>Open it for me</button>
+        <button class="btn btn-quiet" type="button" data-unbox-close hidden>Close the box</button>
+      </div>
     </div>
   </section>
 </main>

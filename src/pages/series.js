@@ -2,6 +2,7 @@ import { gsap, reduce } from "../lib/ui.js";
 import { initFigure } from "../lib/figure.js";
 import { setFlag, getState, ensureId, toast } from "../lib/state.js";
 import * as sound from "../lib/sound.js";
+import { initUnbox } from "../lib/unbox.js";
 
 // hotspots: where they sit on each photo (u, v from top-left of the cut-out)
 const SPOTS = [
@@ -41,10 +42,10 @@ export default async function series() {
       SPOTS.forEach((s, i) => {
         const p = fig.project(s.side, s.u, s.v);
         dots[i].style.transform = `translate(${p.x}px, ${p.y}px)`;
-        dots[i].hidden = !p.facing;
+        dots[i].classList.toggle("is-away", !p.facing);
       });
     });
-  } else dots.forEach((d) => (d.hidden = true));
+  } else dots.forEach((d) => d.classList.add("is-away"));
 
   function openDetail(s) {
     detail.querySelector("img").src = s.img;
@@ -59,7 +60,7 @@ export default async function series() {
   addEventListener("keydown", (e) => e.key === "Escape" && closeDetail());
 
   scanner();
-  box();
+  unbox();
 }
 
 // ---------- the barcode is a key ----------
@@ -98,26 +99,20 @@ function scanner() {
   if (done) { bars.forEach((b) => b.classList.add("on")); line.style.left = "90%"; vault.querySelector("[data-vault-id]").textContent = getState().id; vault.classList.add("on"); }
 }
 
-// ---------- the black box: drag the lid up ----------
-function box() {
-  const lid = document.querySelector("[data-lid]");
-  if (!lid) return;
-  const light = document.querySelector(".box-light");
-  const tee = document.querySelector(".box-inner img");
-  const hint = document.querySelector("[data-box-hint]");
-  let y0 = null, open = 0, opened = false;
-  const apply = (p) => {
-    open = Math.max(0, Math.min(1, p));
-    lid.style.transform = `rotateX(${-open * 112}deg)`;
-    light.style.background = `rgba(232,224,204,${open * 0.18})`;
-    tee.style.transform = `translateZ(${open * 60}px) scale(${0.9 + open * 0.15})`;
-  };
-  lid.addEventListener("pointerdown", (e) => { y0 = e.clientY; lid.setPointerCapture(e.pointerId); sound.friction(); });
-  lid.addEventListener("pointermove", (e) => { if (y0 == null || opened) return; apply((y0 - e.clientY) / 180); });
-  lid.addEventListener("pointerup", () => {
-    y0 = null;
-    if (open > 0.45) { opened = true; gsap.to({ p: open }, { p: 1, duration: reduce ? 0 : 0.6, ease: "power3.out", onUpdate() { apply(this.targets()[0].p); } }); sound.chime(0); setFlag("box"); hint.textContent = "Opened. Inside: Peace Collection 001."; }
-    else gsap.to({ p: open }, { p: 0, duration: 0.4, onUpdate() { apply(this.targets()[0].p); } });
+// ---------- the real box, in 3D ----------
+async function unbox() {
+  const stage = document.querySelector(".unbox-stage");
+  if (!stage) return;
+  const hint = stage.querySelector("[data-unbox-hint]");
+  const openBtn = stage.querySelector("[data-unbox-open]");
+  const closeBtn = stage.querySelector("[data-unbox-close]");
+  const box = await initUnbox(stage);
+  if (!box) { hint.textContent = "Matte black, gold foil, black tissue, a card, a seal and the tee."; openBtn.hidden = true; return; }
+  openBtn.addEventListener("click", () => { box.openAll(); openBtn.hidden = true; closeBtn.hidden = false; });
+  closeBtn.addEventListener("click", () => { box.close(); closeBtn.hidden = true; openBtn.hidden = false; hint.textContent = "Drag up to lift the lid."; });
+  stage.addEventListener("unboxed", () => {
+    setFlag("box");
+    hint.textContent = "Inside: the card, the seal, the PEACE sticker and your tee.";
+    openBtn.hidden = true; closeBtn.hidden = false;
   });
-  lid.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); apply(1); opened = true; setFlag("box"); hint.textContent = "Opened. Inside: Peace Collection 001."; } });
 }
