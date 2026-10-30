@@ -11,6 +11,13 @@ import { whenNear } from "./near.js";
 
 const { smoothstep, damp, clamp, lerp } = THREE.MathUtils;
 const GOLD = "#cdb17a";
+// box finish: base and lid wall colours, the lid top (a soft gradient when the two stops differ), the lid underside
+const FINISHES = {
+  black: { base: 0x161514, lid: 0x161514, top: ["#0d0d0d", "#0d0d0d"], under: "#141414" },
+  // contrast: a deep black lid top, gray walls so every edge reads crisp, and a stronger rim light
+  contrast: { base: 0x2f3033, lid: 0x2f3033, top: ["#070707", "#121212"], under: "#0c0c0c", rim: 3.6, key: 2.8 },
+};
+const FINISH = FINISHES[new URLSearchParams(location.search).get("box")] || FINISHES.contrast; // ?box=black shows the old all-black finish
 const W = 3.0, D = 2.1, H = 0.62, T = 0.05; // base box (outer), wall thickness
 const LH = 0.5, LG = 0.035;                  // lid wall height, lid gap
 
@@ -32,7 +39,9 @@ function canvasTex(w, h, draw, srgb = true, scale = Q) {
 // lid top: matte black with gold foil text; a second map marks the foil as metal
 function lidTop() {
   const paint = (ctx, w, h, foil) => {
-    ctx.fillStyle = foil ? "#000" : "#0d0d0d"; ctx.fillRect(0, 0, w, h);
+    if (foil) ctx.fillStyle = "#000";
+    else { const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, FINISH.top[0]); g.addColorStop(1, FINISH.top[1]); ctx.fillStyle = g; }
+    ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = foil ? "#fff" : GOLD; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.letterSpacing = "6px"; ctx.font = "600 104px Archivo"; ctx.fillText("EMK SYSTEM™", w / 2, h * 0.44);
     ctx.letterSpacing = "10px"; ctx.font = "500 50px Archivo"; ctx.fillText("COLLECTION", w / 2, h * 0.545);
@@ -44,7 +53,7 @@ function lidTop() {
 }
 function lidUnder() {
   const paint = (ctx, w, h, foil) => {
-    ctx.fillStyle = foil ? "#000" : "#141414"; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = foil ? "#000" : FINISH.under; ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = foil ? "#fff" : GOLD; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = "500 92px Archivo"; ctx.fillText("MADE WITH INTENTION", w / 2, h * 0.44);
     ctx.font = "500 92px Archivo"; ctx.fillText("PEACE · UNITY · CULTURE", w / 2, h * 0.58);
@@ -152,13 +161,14 @@ export async function initUnbox(stage) {
 
   // matte black that still reads on a near-black page: a lifted base colour, a strong cool rim
   // that draws the box's top edges, and a side light that separates the walls from the floor
-  const key = new THREE.DirectionalLight(0xfff1dc, 2.4); key.position.set(-4, 6, 2); scene.add(key);
+  const key = new THREE.DirectionalLight(0xfff1dc, FINISH.key ?? 2.4); key.position.set(-4, 6, 2); scene.add(key);
   const side = new THREE.DirectionalLight(0xfff1dc, 1.5); side.position.set(-5, 1.2, 4); scene.add(side);
-  const rim = new THREE.DirectionalLight(0xdfe6ff, 2.4); rim.position.set(4, 3.5, -4); scene.add(rim);
+  const rim = new THREE.DirectionalLight(0xdfe6ff, FINISH.rim ?? 2.4); rim.position.set(4, 3.5, -4); scene.add(rim);
   const fill = new THREE.DirectionalLight(0xffe9cc, 0.6); fill.position.set(5, 1.5, 5); scene.add(fill);
   scene.add(new THREE.AmbientLight(0xffffff, 0.12));
 
-  const black = new THREE.MeshStandardMaterial({ color: 0x161514, roughness: 0.78, metalness: 0 });
+  const black = new THREE.MeshStandardMaterial({ color: FINISH.base, roughness: 0.78, metalness: 0 });
+  const lidWall = FINISH.lid === FINISH.base ? black : new THREE.MeshStandardMaterial({ color: FINISH.lid, roughness: 0.78, metalness: 0 });
   const inner = new THREE.MeshStandardMaterial({ color: 0x0f0e0d, roughness: 0.95 });
 
   // ---------- base tray ----------
@@ -213,11 +223,13 @@ export async function initUnbox(stage) {
   };
   topMat.metalness = 1;
   const underMat = new THREE.MeshStandardMaterial({ map: under.map, roughness: 0.85, metalness: 1, metalnessMap: under.foil });
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(LW, T, LD), [black, black, topMat, underMat, black, black]);
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(LW, T, LD), [lidWall, lidWall, topMat, underMat, lidWall, lidWall]);
   plate.position.y = LH - T / 2; lid.add(plate);
-  const lslab = (w, h, d, x, z) => { const s = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), black); s.position.set(x, h / 2, z); lid.add(s); };
-  lslab(LW, LH, T, 0, LD / 2 - T / 2); lslab(LW, LH, T, 0, -LD / 2 + T / 2);
-  lslab(T, LH, LD - 2 * T, LW / 2 - T / 2, 0); lslab(T, LH, LD - 2 * T, -LW / 2 + T / 2, 0);
+  const lslab = (w, h, d, x, z) => { const s = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lidWall); s.position.set(x, h / 2, z); lid.add(s); };
+  // walls stop under the top plate, so the two never share a face along the rim (that flickers)
+  const WH = LH - T;
+  lslab(LW, WH, T, 0, LD / 2 - T / 2); lslab(LW, WH, T, 0, -LD / 2 + T / 2);
+  lslab(T, WH, LD - 2 * T, LW / 2 - T / 2, 0); lslab(T, WH, LD - 2 * T, -LW / 2 + T / 2, 0);
   const LID_REST = H + 0.012 - LH; // lid sits over the top of the base
 
   // soft contact shadows (cheap on every device)
