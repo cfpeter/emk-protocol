@@ -189,7 +189,7 @@ export async function initUnbox(stage) {
   floorTex.colorSpace = THREE.SRGBColorSpace;
   floorTex.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
   floorTex.minFilter = THREE.LinearMipmapLinearFilter; floorTex.generateMipmaps = true;
-  const tee = new THREE.Mesh(new THREE.PlaneGeometry(W - 2 * T, D - 2 * T), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.92, color: 0x8a8a8a, envMapIntensity: 0.4 }));
+  const tee = new THREE.Mesh(new THREE.PlaneGeometry(W - 2 * T, D - 2 * T), new THREE.MeshBasicMaterial({ map: floorTex, toneMapped: false })); // the photo exactly as edited: the box lights would wash the black tee out to gray
   tee.rotation.x = -Math.PI / 2; tee.position.set(0, T + 0.012, 0); base.add(tee);
 
   // tissue: two flaps hinged at the long walls
