@@ -18,6 +18,7 @@ export function ensureId() {
     const n = Math.floor(1000 + Math.random() * 9000);
     state.id = `PCE-${n}`;
     state.since = new Date().toISOString().slice(0, 10);
+    save();
   }
   return state.id;
 }

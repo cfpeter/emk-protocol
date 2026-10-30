@@ -1,8 +1,7 @@
 import { gsap, reduce } from "../lib/ui.js";
-import { setFlag, getState, ensureId, toast } from "../lib/state.js";
+import { setFlag, getState, ensureId } from "../lib/state.js";
 import * as sound from "../lib/sound.js";
 import { initUnbox } from "../lib/unbox.js";
-import { mountCard } from "../lib/card.js";
 
 // hotspots on the real photos (u, v as fractions of each 3:4 photo)
 const SPOTS = [
@@ -79,72 +78,129 @@ export default async function series() {
   addEventListener("scroll", () => { if (detail.classList.contains("on") && scrollY > innerHeight * 0.4) closeDetail(); }, { passive: true });
   addEventListener("keydown", (e) => e.key === "Escape" && closeDetail());
 
-  scanner();
+  gate();
+  closer();
   unbox();
 }
 
-// ---------- the barcode is a key ----------
-function scanner() {
-  const label = document.querySelector("[data-scan]");
-  if (!label) return;
-  const line = label.querySelector(".scan-line");
-  const barsEl = label.querySelector(".scan-bars");
-  const BARS = 24;
-  barsEl.innerHTML = "<i></i>".repeat(BARS);
-  const bars = [...barsEl.children];
-  const vault = document.querySelector("[data-vault]");
-  const x0 = 0.31, x1 = 0.73;
-  let dragging = false, done = getState().flags?.barcode, lit = 0;
-  const PARK = x1 + 0.04; // where the line rests once the code has been read
-  const tag = line.querySelector("span");
-  const setX = (fx) => {
-    line.style.left = `${fx * 100}%`;
-    const k = Math.max(0, Math.min(BARS, Math.floor(((fx - x0) / (x1 - x0)) * BARS)));
-    if (done) {
-      // already read: the bars follow the line both ways, so you can scan it again for fun
-      bars.forEach((bar, i) => { const on = i < k; if (on !== bar.classList.contains("on")) { bar.classList.toggle("on", on); if (on) sound.tick(); } });
-      return;
-    }
-    for (let i = lit; i < k; i++) { bars[i].classList.add("on"); sound.tick(); }
-    lit = Math.max(lit, k);
-    if (lit >= BARS) openVault();
+// ---------- 100% cotton: tap to go closer, box → label → hem, each a real photo at full quality ----------
+const STEPS = [
+  { note: "Folded in the EMK box, wrapped in black tissue printed EMK SYSTEM.", cursor: "Closer" },
+  { note: "The chest label: PEACE, سلام, EST. 2021, Los Angeles, EMK-001.", cursor: "Closer" },
+  { note: "A barcode print at the hem: EMK-001 / Peace Collection.", cursor: "Back" },
+];
+function closer() {
+  const fig = document.querySelector("[data-fabric]");
+  if (!fig) return;
+  const stack = fig.querySelector(".fabric-stack"), imgs = [...stack.querySelectorAll("img")];
+  const btns = [...document.querySelectorAll("[data-step]")], note = document.querySelector("[data-step-note]");
+  let cur = 0, busy = false;
+  const go = (i, x = 0.5, y = 0.5) => {
+    if (i === cur || busy) return;
+    busy = true;
+    const from = imgs[cur], to = imgs[i];
+    cur = i;
+    btns.forEach((b, k) => b.setAttribute("aria-pressed", String(k === i)));
+    note.textContent = STEPS[i].note;
+    fig.dataset.cursor = STEPS[i].cursor; fig.style.cursor = i === 2 ? "zoom-out" : "zoom-in";
+    document.dispatchEvent(new CustomEvent("cursor:refresh"));
+    sound.tick();
+    // the next photo opens as a circle from where you tapped, settling from a slight push-in
+    gsap.set(to, { zIndex: 2, visibility: "visible" }); gsap.set(from, { zIndex: 1 });
+    const at = `${x * 100}% ${y * 100}%`;
+    gsap.fromTo(to, { clipPath: `circle(0% at ${at})`, scale: 1.12, transformOrigin: at }, {
+      clipPath: `circle(150% at ${at})`, scale: 1, duration: reduce ? 0 : 0.9, ease: "power3.inOut",
+      onComplete: () => { from.classList.remove("is-on"); gsap.set(from, { clearProps: "visibility,zIndex" }); to.classList.add("is-on"); gsap.set(to, { clearProps: "clipPath,zIndex,visibility" }); busy = false; },
+    });
   };
-  // after a read, letting go glides the line back to rest with every bar lit
-  const settle = () => {
-    if (!done) return;
-    const o = { x: parseFloat(line.style.left) / 100 };
-    gsap.to(o, { x: PARK, duration: 0.6, ease: "power3.out", onUpdate: () => setX(o.x), onComplete: () => bars.forEach((bar) => bar.classList.add("on")) });
-  };
-  const fromEvent = (e) => { const r = label.getBoundingClientRect(); return Math.max(0.04, Math.min(0.96, (e.clientX - r.left) / r.width)); };
-  line.addEventListener("pointerdown", (e) => { dragging = true; line.setPointerCapture(e.pointerId); });
-  line.addEventListener("pointermove", (e) => dragging && setX(fromEvent(e)));
-  line.addEventListener("pointerup", () => { dragging = false; settle(); });
-  line.addEventListener("pointercancel", () => { dragging = false; settle(); });
-  line.addEventListener("keydown", (e) => {
-    const step = e.key === "ArrowRight" ? 0.04 : e.key === "ArrowLeft" ? -0.04 : 0;
-    if (!step) return;
-    e.preventDefault(); setX(Math.max(0.04, Math.min(0.96, parseFloat(line.style.left || "6") / 100 + step)));
+  fig.addEventListener("click", (e) => {
+    const r = stack.getBoundingClientRect();
+    go((cur + 1) % STEPS.length, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
   });
-  function openVault() {
-    done = true;
+  btns.forEach((b) => b.addEventListener("click", () => go(Number(b.dataset.step))));
+  // with a mouse the photo tilts toward the pointer and a soft light follows it
+  if (reduce || !matchMedia("(pointer: fine)").matches) return;
+  const rx = gsap.quickTo(stack, "rotationX", { duration: 0.6, ease: "power3.out" });
+  const ry = gsap.quickTo(stack, "rotationY", { duration: 0.6, ease: "power3.out" });
+  const sheen = stack.querySelector(".fabric-sheen");
+  fig.addEventListener("pointermove", (e) => {
+    const r = stack.getBoundingClientRect(), u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
+    rx((0.5 - v) * 8); ry((u - 0.5) * 10);
+    sheen.style.setProperty("--sx", `${u * 100}%`); sheen.style.setProperty("--sy", `${v * 100}%`);
+  });
+  fig.addEventListener("pointerleave", () => { rx(0); ry(0); });
+}
+
+// ---------- the barcode is the key: scan the chest label to open Series 001 ----------
+// the scan line is the edge of the reveal: behind it the photo, ahead of it the label
+function gate() {
+  const piece = document.querySelector(".piece");
+  const cover = piece.querySelector("[data-gate]"), line = piece.querySelector("[data-gate-line]");
+  const copy = piece.querySelector("[data-gate-copy]"), status = piece.querySelector("[data-gate-status]");
+  const lead = piece.querySelector("[data-piece-lead]"), frame = piece.querySelector(".piece-frame");
+  if (!cover || getState().flags?.barcode || getState().flags?.gate) return; // read (or skipped) once, open for good
+  const LEAD = lead.textContent;
+  const BARS = 24, X0 = 0.31, X1 = 0.73, START = 0.06; // where the barcode sits across the label
+  let pos = START, read = 0, open = false, dragging = false, auto = null;
+
+  piece.classList.add("is-locked");
+  cover.hidden = line.hidden = copy.hidden = false;
+  lead.textContent = "The Peace tee. The barcode on its chest label is your key. Drag the scan line across it.";
+
+  const draw = () => {
+    cover.style.clipPath = `inset(0 0 0 ${pos * 100}%)`;
+    line.style.left = `${pos * 100}%`;
+    line.setAttribute("aria-valuenow", String(Math.round(pos * 100)));
+  };
+  const to = (x) => {
+    if (open) return;
+    pos = Math.max(pos, Math.min(1, x)); // the line only moves forward
+    const k = Math.max(0, Math.min(BARS, Math.floor(((pos - X0) / (X1 - X0)) * BARS)));
+    for (; read < k; read++) sound.tick();
+    if (read > 0) status.textContent = `Reading ${String(read).padStart(2, "0")} / ${BARS}`;
+    draw();
+    if (read >= BARS) finish();
+  };
+  function finish() {
+    open = true; clearTimeout(auto);
     setFlag("barcode");
-    tag.textContent = "READ";
-    line.setAttribute("aria-label", "Barcode read. Drag to scan it again.");
+    const id = getState().id || ensureId();
+    status.textContent = `Read · Access granted to ${id}`;
     sound.granted(); sound.buzz(40);
-    toast("Barcode read. Your Protocol Card is ready.");
-    vault.querySelector("[data-vault-id]").textContent = getState().id || ensureId();
-    reveal();
+    const o = { x: pos };
+    gsap.to(o, { x: 1, duration: reduce ? 0 : 0.5, ease: "power2.out", onUpdate: () => { pos = o.x; draw(); }, onComplete: done });
   }
-  let cardOn = false;
-  const card = () => { if (!cardOn) { cardOn = true; mountCard(vault.querySelector("[data-vault-card]"), vault.querySelector("[data-vault-save]")); } };
-  function reveal() { card(); vault.classList.add("on"); gsap.from(vault.children, { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.8, ease: "expo.out" }); }
-  if (done) {
-    bars.forEach((b) => b.classList.add("on"));
-    line.style.left = `${PARK * 100}%`;
-    tag.textContent = "READ";
-    vault.querySelector("[data-vault-id]").textContent = getState().id;
-    card(); vault.classList.add("on");
+  function done() {
+    cover.remove(); line.remove();
+    piece.classList.remove("is-locked");
+    lead.textContent = LEAD;
+    gsap.fromTo(piece.querySelector(".piece-controls"), { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: reduce ? 0 : 0.6, ease: "expo.out" });
+    piece.querySelector("[data-gate-skip]").remove();
+    setTimeout(() => gsap.to(copy, { autoAlpha: 0, duration: 0.6, onComplete: () => copy.remove() }), 4000);
   }
+  // nobody touching it: after a moment it scans itself, slowly enough to watch
+  const selfScan = () => {
+    if (open || dragging) return;
+    const o = { x: pos };
+    gsap.to(o, { x: 1, duration: reduce ? 0 : 2.2, ease: "power1.inOut", onUpdate: () => to(o.x) });
+  };
+  const arm = () => { clearTimeout(auto); auto = setTimeout(selfScan, 8000); };
+  arm();
+
+  const fx = (e) => { const r = frame.getBoundingClientRect(); return (e.clientX - r.left) / r.width; };
+  // a loose sideways swipe anywhere on the label reads it; vertical drags still scroll the page
+  [cover, line].forEach((el) => {
+    el.addEventListener("pointerdown", (e) => { dragging = true; clearTimeout(auto); el.setPointerCapture(e.pointerId); to(fx(e)); });
+    el.addEventListener("pointermove", (e) => dragging && to(fx(e)));
+    const up = () => { dragging = false; if (!open) arm(); };
+    el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
+  });
+  line.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") { e.preventDefault(); clearTimeout(auto); to(pos + 0.05); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selfScan(); }
+  });
+  piece.querySelector("[data-gate-skip]").addEventListener("click", () => { clearTimeout(auto); if (!open) { open = true; setFlag("gate"); sound.tick(); done(); } });
+  draw();
 }
 
 // ---------- the real box, in 3D ----------

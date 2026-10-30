@@ -18,7 +18,11 @@
   <section class="piece" aria-labelledby="piece-title">
     <div class="piece-copy">
       <h1 class="display" id="piece-title">Series 001</h1>
-      <p class="lead muted">The Peace tee. Black, oversized, relaxed. Tap a dot for a closer look.</p>
+      <p class="lead muted" data-piece-lead>The Peace tee. Black, oversized, relaxed. Tap a dot for a closer look.</p>
+      <div class="gate-copy" data-gate-copy hidden>
+        <p class="gate-status" data-gate-status aria-live="polite">PCE24LDN8T004 · ready to read</p>
+        <button class="gate-skip" type="button" data-gate-skip>Skip the scan</button>
+      </div>
       <div class="piece-controls">
         <div class="seg" role="group" aria-label="Side">
           <button type="button" aria-pressed="true" data-face="back">Back</button>
@@ -33,6 +37,8 @@
         <div class="piece-side is-on" data-side="back"><img src="img/lb-back-close.webp" alt="The Peace tee from behind, the print in full" width="1200" height="1600"><div class="hotspots"></div></div>
         <div class="piece-side" data-side="front"><img src="img/lb-front-bench.webp" alt="The Peace tee from the front, the woven chest label" width="1200" height="1600"><div class="hotspots"></div></div>
       </div>
+      <div class="gate" data-gate hidden><img src="img/label.webp" alt="The woven chest label with barcode PCE24LDN8T004" width="540" height="800"></div>
+      <div class="gate-line" data-gate-line role="slider" tabindex="0" aria-label="Scan the barcode to open Series 001" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-cursor="Drag" hidden><span>SCAN</span></div>
     </figure>
   </section>
   <div class="detail" data-detail role="dialog" aria-label="Detail">
@@ -49,41 +55,32 @@
     <div class="wrap fabric">
       <div>
         <h2 class="head" id="fabric-title" data-split>100% cotton</h2>
-        <p class="lead muted" data-reveal style="margin-top:20px">Soft black cotton, cut oversized and relaxed. It arrives folded in the EMK box, wrapped in black tissue, with the hang tag on.</p>
+        <p class="lead muted" data-reveal style="margin-top:20px">Soft black cotton, cut oversized and relaxed. Tap the photo to go closer, from the box to the label to the hem.</p>
         <dl class="fabric-facts" data-reveal>
           <div><dt>Fabric</dt><dd>100% cotton</dd></div>
           <div><dt>Fit</dt><dd>Oversized, dropped shoulders</dd></div>
           <div><dt>Print</dt><dd>Cream, front label and full back</dd></div>
         </dl>
+        <div class="closer" data-reveal>
+          <div class="closer-steps" role="group" aria-label="Closer">
+            <button type="button" aria-pressed="true" data-step="0"><span>01</span>The box</button>
+            <button type="button" aria-pressed="false" data-step="1"><span>02</span>The label</button>
+            <button type="button" aria-pressed="false" data-step="2"><span>03</span>The hem</button>
+          </div>
+          <p class="closer-note muted" data-step-note aria-live="polite">Folded in the EMK box, wrapped in black tissue printed EMK SYSTEM.</p>
+        </div>
       </div>
-      <figure class="fabric-photo" data-clip>
-        <img src="img/lb-folded.webp" alt="The tee folded in its box: black cotton, the EMK SYSTEM neck label, the hang tag and the chest label" width="1200" height="1600" loading="lazy">
+      <figure class="fabric-photo" data-fabric data-cursor="Closer">
+        <div class="fabric-stack">
+          <img class="is-on" src="img/lb-folded.webp" alt="The tee folded in its box: black cotton, the EMK SYSTEM neck label, the hang tag and the chest label" width="1200" height="1600" loading="lazy">
+          <img src="img/label-tag.webp" alt="Close up: the cream chest label with PEACE, سلام and barcode PCE24LDN8T004, and the black hang tag" width="1100" height="1467" loading="lazy">
+          <img src="img/hem.webp" alt="Close up: the barcode print at the hem, EMK-001 / Peace Collection" width="1100" height="1467" loading="lazy">
+          <span class="fabric-sheen" aria-hidden="true"></span>
+        </div>
       </figure>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="scan-title">
-    <div class="wrap scan">
-      <div>
-        <h2 class="head" id="scan-title" data-split>The barcode is a key</h2>
-        <p class="lead muted" data-reveal style="margin-top:24px">Drag the scan line across the label. Read every bar and the protocol opens a layer for you.</p>
-        <div class="vault" data-vault>
-          <p class="lead">Access granted to <b data-vault-id>PCE-····</b>.</p>
-          <p class="muted" style="margin-top:8px">Your Protocol Card is ready. Save it, post it, tag @emk_system.</p>
-          <div class="vault-card"><canvas data-vault-card aria-label="Your Protocol Card" role="img"></canvas></div>
-          <div class="vault-actions">
-            <button class="btn btn-quiet" type="button" data-vault-save>Save your card</button>
-            <a class="btn" href="order.html">Claim your size <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-          </div>
-        </div>
-      </div>
-      <div class="scan-label" data-scan>
-        <img src="img/label.webp" alt="The woven chest label with barcode PCE24LDN8T004" loading="lazy" width="540" height="800">
-        <div class="scan-bars" aria-hidden="true"></div>
-        <div class="scan-line" role="slider" tabindex="0" aria-label="Scan the barcode" aria-valuemin="0" aria-valuemax="100" data-cursor="Drag"><span>SCAN</span></div>
-      </div>
-    </div>
-  </section>
 
   <section class="unbox" aria-labelledby="box-title">
     <div class="unbox-head">
