@@ -461,3 +461,27 @@ main { display: block; }
 .ritual { background: var(--bg); }
 .ritual canvas { opacity: 0; transition: opacity 1.2s var(--ease-out); }
 .ritual.has-webgl canvas { opacity: 1; }
+
+/* lead: final QA fixes */
+.story-copy .head { font-size: clamp(40px, 4.4vw, 72px); }
+.ritual-title { position: relative; pointer-events: auto; }
+
+/* lead: fabric loupe */
+.fabric { display: grid; grid-template-columns: 5fr 6fr; gap: clamp(32px, 6vw, 112px); align-items: center; }
+.fabric-facts { margin-top: 32px; display: grid; gap: 14px; }
+.fabric-facts div { display: grid; grid-template-columns: 7rem 1fr; gap: 16px; }
+.fabric-facts dt { color: var(--muted); }
+.loupe { position: relative; justify-self: end; width: min(100%, 520px); touch-action: none; }
+.loupe img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.loupe figcaption { margin-top: 12px; font-size: 15px; }
+.loupe-lens {
+  position: absolute; left: 0; top: 0; width: 180px; height: 180px; border-radius: 50%;
+  border: 2px solid var(--accent); background-repeat: no-repeat; pointer-events: none;
+  opacity: 0; transform: scale(.6); transition: opacity .25s var(--ease-out);
+}
+.loupe.is-looking .loupe-lens { opacity: 1; }
+@media (max-width: 760px) {
+  .fabric { grid-template-columns: 1fr; }
+  .loupe { justify-self: center; }
+  .loupe-lens { width: 140px; height: 140px; }
+}

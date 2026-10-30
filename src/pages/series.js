@@ -79,6 +79,7 @@ export default async function series() {
   addEventListener("keydown", (e) => e.key === "Escape" && closeDetail());
 
   scanner();
+  loupe();
   unbox();
 }
 
@@ -94,28 +95,54 @@ function scanner() {
   const vault = document.querySelector("[data-vault]");
   const x0 = 0.31, x1 = 0.73;
   let dragging = false, done = getState().flags?.barcode, lit = 0;
+  const PARK = x1 + 0.04; // where the line rests once the code has been read
+  const tag = line.querySelector("span");
   const setX = (fx) => {
     line.style.left = `${fx * 100}%`;
-    const k = Math.floor(((fx - x0) / (x1 - x0)) * BARS);
-    for (let i = lit; i < Math.min(k, BARS); i++) { bars[i].classList.add("on"); sound.tick(); }
-    lit = Math.max(lit, Math.min(k, BARS));
-    if (lit >= BARS && !done) openVault();
+    const k = Math.max(0, Math.min(BARS, Math.floor(((fx - x0) / (x1 - x0)) * BARS)));
+    if (done) {
+      // already read: the bars follow the line both ways, so you can scan it again for fun
+      bars.forEach((bar, i) => { const on = i < k; if (on !== bar.classList.contains("on")) { bar.classList.toggle("on", on); if (on) sound.tick(); } });
+      return;
+    }
+    for (let i = lit; i < k; i++) { bars[i].classList.add("on"); sound.tick(); }
+    lit = Math.max(lit, k);
+    if (lit >= BARS) openVault();
+  };
+  // after a read, letting go glides the line back to rest with every bar lit
+  const settle = () => {
+    if (!done) return;
+    const o = { x: parseFloat(line.style.left) / 100 };
+    gsap.to(o, { x: PARK, duration: 0.6, ease: "power3.out", onUpdate: () => setX(o.x), onComplete: () => bars.forEach((bar) => bar.classList.add("on")) });
   };
   const fromEvent = (e) => { const r = label.getBoundingClientRect(); return Math.max(0.04, Math.min(0.96, (e.clientX - r.left) / r.width)); };
   line.addEventListener("pointerdown", (e) => { dragging = true; line.setPointerCapture(e.pointerId); });
   line.addEventListener("pointermove", (e) => dragging && setX(fromEvent(e)));
-  line.addEventListener("pointerup", () => { dragging = false; });
-  line.addEventListener("keydown", (e) => { if (e.key === "ArrowRight") { e.preventDefault(); setX(Math.min(0.96, parseFloat(line.style.left || "6") / 100 + 0.04)); } });
+  line.addEventListener("pointerup", () => { dragging = false; settle(); });
+  line.addEventListener("pointercancel", () => { dragging = false; settle(); });
+  line.addEventListener("keydown", (e) => {
+    const step = e.key === "ArrowRight" ? 0.04 : e.key === "ArrowLeft" ? -0.04 : 0;
+    if (!step) return;
+    e.preventDefault(); setX(Math.max(0.04, Math.min(0.96, parseFloat(line.style.left || "6") / 100 + step)));
+  });
   function openVault() {
     done = true;
     setFlag("barcode");
+    tag.textContent = "READ";
+    line.setAttribute("aria-label", "Barcode read. Drag to scan it again.");
     sound.chord(); sound.buzz(40);
     toast("Barcode read. Protocol layer open.");
     vault.querySelector("[data-vault-id]").textContent = getState().id || ensureId();
     reveal();
   }
   function reveal() { vault.classList.add("on"); gsap.from(vault.children, { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.8, ease: "expo.out" }); }
-  if (done) { bars.forEach((b) => b.classList.add("on")); line.style.left = "90%"; vault.querySelector("[data-vault-id]").textContent = getState().id; vault.classList.add("on"); }
+  if (done) {
+    bars.forEach((b) => b.classList.add("on"));
+    line.style.left = `${PARK * 100}%`;
+    tag.textContent = "READ";
+    vault.querySelector("[data-vault-id]").textContent = getState().id;
+    vault.classList.add("on");
+  }
 }
 
 // ---------- the real box, in 3D ----------
@@ -135,4 +162,28 @@ async function unbox() {
     hint.textContent = "Inside: the card, the seal, the PEACE sticker and your tee.";
     openBtn.hidden = true; closeBtn.hidden = false;
   });
+}
+
+// ---------- the fabric loupe: a round lens that magnifies the real photo ----------
+function loupe() {
+  const fig = document.querySelector("[data-loupe]");
+  if (!fig) return;
+  const img = fig.querySelector("img");
+  const lens = fig.querySelector(".loupe-lens");
+  const ZOOM = 2.6;
+  lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
+  const at = (e) => {
+    const r = img.getBoundingClientRect();
+    const x = Math.max(0, Math.min(r.width, e.clientX - r.left)), y = Math.max(0, Math.min(r.height, e.clientY - r.top));
+    const L = lens.offsetWidth / 2;
+    lens.style.transform = `translate(${x - L}px, ${y - L}px)`;
+    lens.style.backgroundSize = `${r.width * ZOOM}px ${r.height * ZOOM}px`;
+    lens.style.backgroundPosition = `${-(x * ZOOM - L)}px ${-(y * ZOOM - L)}px`;
+  };
+  const show = (e) => { fig.classList.add("is-looking"); at(e); };
+  fig.addEventListener("pointerenter", show);
+  fig.addEventListener("pointerdown", (e) => { fig.setPointerCapture(e.pointerId); show(e); sound.tick(); });
+  fig.addEventListener("pointermove", (e) => fig.classList.contains("is-looking") && at(e));
+  fig.addEventListener("pointerleave", () => fig.classList.remove("is-looking"));
+  fig.addEventListener("pointerup", (e) => { if (e.pointerType !== "mouse") fig.classList.remove("is-looking"); });
 }

@@ -154,7 +154,7 @@ export function splitWords(el) {
 function reveals() {
   if (reduce) { gsap.set("[data-reveal], [data-clip]", { clearProps: "all" }); return; }
   document.querySelectorAll("[data-split]").forEach((el) => {
-    gsap.from(splitWords(el), { yPercent: 108, duration: 1, ease: "power4.out", stagger: 0.06, scrollTrigger: { trigger: el, start: "top 88%", once: true } });
+    gsap.from(splitWords(el), { yPercent: 108, duration: 1, ease: "power4.out", stagger: 0.06, scrollTrigger: { trigger: el, start: "top 96%", once: true } });
   });
   document.querySelectorAll("[data-reveal]").forEach((el, i) => {
     gsap.to(el, { autoAlpha: 1, y: 0, duration: 1, ease: "expo.out", delay: (i % 3) * 0.06, scrollTrigger: { trigger: el, start: "top 90%", once: true } });
