@@ -1,4 +1,5 @@
-import { gsap, ScrollTrigger, fine, reduce } from "../lib/ui.js";
+import { gsap, ScrollTrigger, fine, reduce, lenis } from "../lib/ui.js";
+import * as sound from "../lib/sound.js";
 import { initRitual } from "../lib/ritual.js";
 import { initUnbox } from "../lib/unbox.js";
 import { getState, setFlag } from "../lib/state.js";
@@ -8,7 +9,8 @@ export default async function home() {
   initRitual(ritual);
 
   // the reward: once the protocol is complete, their box rises in and they open it
-  ritual.addEventListener("protocol:complete", () => setTimeout(() => revealBox(ritual), reduce ? 0 : 1700), { once: true });
+  // between "Protocol complete" and the box, the page holds still and a loader shows the box is on its way
+  ritual.addEventListener("protocol:complete", () => { waiting(ritual); setTimeout(() => revealBox(ritual), reduce ? 0 : 1700); }, { once: true });
 
   // the story: the back print wipes over to the chest label as you scroll
   const story = document.querySelector(".story");
@@ -35,15 +37,42 @@ export default async function home() {
   }
 }
 
+// the wait: scrolling pauses, the bar runs to 90% on its own and only reaches 100% when the 3D box is ready
+let wait = null;
+function waiting(ritual) {
+  const bar = ritual.querySelector("[data-wait-bar]"), text = ritual.querySelector("[data-wait-text]");
+  const html = document.documentElement;
+  lenis?.stop(); html.style.overflow = "hidden"; // touch scrolling on phones and in Instagram too
+  const p = { v: 0 };
+  let step = 0;
+  const draw = () => {
+    bar.style.transform = `scaleX(${p.v})`;
+    const n = Math.round(p.v * 100);
+    text.textContent = n >= 100 ? "YOUR BOX IS READY" : `PREPARING YOUR BOX · ${n}%`;
+    if (Math.floor(n / 20) > step) { step = Math.floor(n / 20); sound.tick(); }
+  };
+  const run = gsap.to(p, { v: 0.9, duration: reduce ? 0 : 2.2, ease: "power2.out", onUpdate: draw });
+  wait = {
+    done() {
+      run.kill();
+      gsap.to(p, { v: 1, duration: reduce ? 0 : 0.35, ease: "power1.out", onUpdate: draw, onComplete: () => { html.style.overflow = ""; lenis?.start(); } });
+    },
+  };
+  // never trap the page: if loading stalls, scrolling comes back anyway
+  setTimeout(() => { html.style.overflow = ""; lenis?.start(); }, 12000);
+}
+
 async function revealBox(ritual) {
   const el = ritual.querySelector("[data-ritual-box]");
   const hint = el.querySelector("[data-rb-hint]");
   const actions = el.querySelector("[data-rb-actions]");
   const done = el.querySelector("[data-rb-done]");
   el.querySelector("[data-rb-id]").textContent = getState().id || "";
-  el.hidden = false;
-  gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: reduce ? 0 : 1, ease: "power2.out", onComplete: () => { ritual.dataset.paused = "1"; } });
-  gsap.from(el.querySelectorAll(".rb-head > *, .rb-actions"), { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.9, ease: "expo.out", delay: 0.4 });
+  gsap.set(el, { autoAlpha: 0 }); el.hidden = false; // laid out (so the 3D can size itself) but invisible until it is ready
+  const fadeIn = () => {
+    gsap.to(el, { autoAlpha: 1, duration: reduce ? 0 : 1, ease: "power2.out", onComplete: () => { ritual.dataset.paused = "1"; } });
+    gsap.from(el.querySelectorAll(".rb-head > *, .rb-actions"), { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.9, ease: "expo.out", delay: 0.4 });
+  };
   const showDone = () => {
     setFlag("box");
     hint.textContent = "Inside: the card, the seal, the PEACE sticker and your tee.";
@@ -53,6 +82,8 @@ async function revealBox(ritual) {
     gsap.from(done.children, { autoAlpha: 0, y: 16, stagger: 0.1, duration: 0.8, ease: "expo.out" });
   };
   const box = await initUnbox(el);
+  wait?.done();
+  setTimeout(fadeIn, reduce ? 0 : 400); // let "YOUR BOX IS READY" land first
   if (!box) { showDone(); return; } // no 3D available: go straight to the next steps
   el.addEventListener("unboxed", showDone, { once: true });
   el.querySelector("[data-rb-open]").addEventListener("click", () => box.openAll());

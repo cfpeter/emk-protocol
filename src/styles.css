@@ -188,6 +188,11 @@ main { display: block; }
 .ritual-done { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; justify-items: center; padding: calc(var(--head-h) + 24px) var(--margin) 40px; background: rgba(10,10,10,.8); }
 .ritual-done .display { margin-bottom: 16px; font-size: clamp(56px, 9vw, 140px); }
 .ritual-done .lead { max-width: 34ch; }
+/* while the box loads: a thin gold bar and a status line, in the boot line's voice */
+.ritual-wait { margin-top: 36px; display: grid; justify-items: center; gap: 12px; }
+.ritual-wait-bar { display: block; width: min(240px, 60vw); height: 2px; background: rgba(212, 195, 163, .18); overflow: hidden; }
+.ritual-wait-bar i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+.ritual-wait-text { font: 600 13px/1.6 var(--sans); letter-spacing: .08em; color: var(--muted); font-variant-numeric: tabular-nums; }
 .ritual-done:not([hidden]) ~ .ritual-skip, .ritual-done:not([hidden]) ~ .ritual-say { display: none; }
 .ritual-skip { position: absolute; right: var(--margin); bottom: 12px; pointer-events: auto; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
