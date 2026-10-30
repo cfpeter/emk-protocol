@@ -25,6 +25,13 @@ function unlock() {
   starting = true;
   ctx.resume().catch(() => {}).finally(() => { starting = false; });
 }
+// outside a gesture: ask the browser to start audio; it says yes when this site already has the visitor's trust
+let asked = false;
+function unlockQuiet() {
+  if (asked || running()) return;
+  asked = true; // a blocked resume never settles until a gesture, so this flag never lets sounds queue
+  ctx.resume().catch(() => {});
+}
 const listen = () => GESTURES.forEach((e) => addEventListener(e, unlock, { capture: true, passive: true }));
 listen();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && ctx && !running()) ctx.resume().catch(() => {}); });
@@ -65,7 +72,9 @@ export function setCalm(c) {
 
 function blip(freq, dur, type = "sine", gain = 0.12, when = 0) {
   // while audio is still locked, skip the sound: queued sounds would all fire at once on the first tap
-  if (!on || !(running() || starting)) return;
+  if (!on || !ensure()) return;
+  // still locked: ask once (browsers allow it on a refresh or return visit after earlier clicks), skip this sound
+  if (!running() && !starting) { unlockQuiet(); return; }
   const t = ctx.currentTime + when;
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = type; o.frequency.value = freq;
