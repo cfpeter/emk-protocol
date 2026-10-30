@@ -26,7 +26,7 @@ A showcase-only (no cart) interactive website for **EMK SYSTEM™**, a two-found
 - Processing scripts used: `~/Work/emk-system/scripts/process-new.mjs`, `process-mask.mjs` (Depth Anything + background removal) and inline PIL crops.
 
 ## Confirmed facts
-Barcode **PCE24LDN8T004**. **100% cotton.** Sizes flat chest/length: S 24/27, M 25/28.25, L 25/29, XL 26/29. All sales final; size exchanges 14 days unworn with tags; customer pays shipping. Label EST. 2021. **Never invent** prices, stock, reviews, "limited".
+Barcode **PCE24LDN8T004**. **100% cotton.** Sizes (chest / length / shoulder / sleeve, from their IG Size Guide highlight): S 24/27/23/8.5, M 25/28.25/23/8.5, L 25/29/24/8.5, XL 26/29/24/9. Policies (from their IG Orders/Exchange highlight, now on `policies.html`): order by DM or emksystem01@gmail.com with size + quantity; they confirm availability, price, shipping before payment; payment instructions sent privately; ships after payment verified, tracking shared. All sales final, no refunds. Size exchanges within 14 days of delivery, subject to availability, unworn/unwashed/tags on; customer pays all shipping both ways, no prepaid labels. Damaged/defective/wrong items handled separately under consumer protection law. Label EST. 2021. **Never invent** prices, stock, reviews, "limited".
 
 ## Owner preferences learned (important)
 - Hates: text overlapping text, noise/grain, the 3D cut-out person (removed), background drone sound, hover labels that lie (menu), flashes of old content on refresh. Wants everything interactive, natural, clean; likes the box a lot.
@@ -37,6 +37,7 @@ Barcode **PCE24LDN8T004**. **100% cotton.** Sizes flat chest/length: S 24/27, M 
 - All work committed locally on `main`. **Not pushed.** GitHub repo `cfpeter/emk-protocol` does not exist yet (see push steps below).
 - Inspector: 0 FAIL except `covered-text` on phone for two Series headings and one Home tile label — verified false positives (mid-reveal animation when the inspector jumps).
 - To verify next: the fabric loupe by hand on desktop + phone; a real iPhone opened from Instagram (performance + touch).
+- Policies page: founder should confirm the lines we added that are not in their stories (privacy: order details used only to fulfil, never sold; terms: colors and measurements can vary slightly; IP ownership). Not legal advice; a lawyer review is worth it before taking real volume.
 - Open items from the founder: names/story for Two Minds, why these three languages (Protocol page), price, any more photos/video.
 
 ## Push steps (owner runs, or tells Claude "make it public")

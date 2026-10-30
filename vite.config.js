@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 const root = import.meta.dirname;
-const pages = ["index", "series", "protocol", "minds", "lookbook", "order", "404"];
+const pages = ["index", "series", "protocol", "minds", "lookbook", "order", "policies", "404"];
 
 // <!-- @include name --> pulls partials/name.html into every page at build and dev time,
 // so the shared header, menu and Protocol bar are real HTML (readable without JS).
