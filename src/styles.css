@@ -173,8 +173,6 @@ main { display: block; }
 /* ---------- home: the ritual ---------- */
 .ritual { position: relative; height: var(--stage-h); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .ritual canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.ritual-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.6); }
-.has-webgl .ritual-poster { visibility: hidden; }
 .ritual-ui { position: absolute; inset: 0; display: grid; justify-items: center; align-content: start; text-align: center; padding: max(calc(var(--head-h) + 24px), 15svh) var(--margin) 24px; pointer-events: none; }
 .ritual-boot { font: 600 15px/1.6 var(--sans); letter-spacing: .04em; color: var(--muted); min-height: 1.6em; margin-top: 28px; }
 .ritual-prompt { margin-top: 18px; font-size: var(--lead); }
@@ -458,3 +456,8 @@ main { display: block; }
 .menu-toggle.is-open .menu-icon i:first-child { top: 4.25px; transform: rotate(45deg); }
 .menu-toggle.is-open .menu-icon i:last-child { top: 4.25px; transform: rotate(-45deg); }
 @media (hover: hover) { .menu-toggle:not(.is-open):hover .menu-icon i:last-child { transform: scaleX(.6); transform-origin: right; } }
+
+/* lead: the ritual's first frame is plain black; the gold fades in once the waves are ready */
+.ritual { background: var(--bg); }
+.ritual canvas { opacity: 0; transition: opacity 1.2s var(--ease-out); }
+.ritual.has-webgl canvas { opacity: 1; }
