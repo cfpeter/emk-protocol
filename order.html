@@ -19,23 +19,37 @@
     <div class="wrap fit">
       <div>
         <h1 class="display" data-split style="font-size:clamp(56px,8vw,128px)">Find your fit</h1>
-        <div class="dial">
-          <label for="chest">Lay a tee you like flat. Measure armpit to armpit.</label>
-          <input id="chest" type="range" min="22" max="28" step="0.25" value="25" data-dial>
-          <p class="dial-value" data-dial-value>25 in</p>
+        <p class="lead muted" style="margin-top:20px">Our tees have an intentionally oversized fit. Lay a tee you own, one that fits the way you like, flat on a table. Measure it and we match it to our sizes.</p>
+        <div class="measures">
+          <div class="dial" data-measure="chest">
+            <label for="m-chest"><span>Chest <span class="muted">· armpit to armpit</span></span><output data-out>25 in</output></label>
+            <input id="m-chest" type="range" min="20" max="30" step="0.25" value="25">
+          </div>
+          <div class="dial" data-measure="length">
+            <label for="m-length"><span>Length <span class="muted">· shoulder to hem</span></span><output data-out>28.25 in</output></label>
+            <input id="m-length" type="range" min="24" max="33" step="0.25" value="28.25">
+          </div>
+          <div class="dial" data-measure="shoulder">
+            <label for="m-shoulder"><span>Shoulders <span class="muted">· seam to seam</span></span><output data-out>23 in</output></label>
+            <input id="m-shoulder" type="range" min="18" max="28" step="0.25" value="23">
+          </div>
         </div>
-        <div class="seg" role="group" aria-label="Fit">
-          <button type="button" aria-pressed="true" data-fit="boxy">Boxy, as cut</button>
-          <button type="button" aria-pressed="false" data-fit="closer">Closer</button>
-        </div>
-        <p class="lead" data-why style="margin-top:24px"></p>
       </div>
-      <div class="fit-figure" aria-hidden="true">
-        <svg viewBox="-60 -40 320 300">
+      <div class="fit-figure">
+        <svg viewBox="-60 -40 320 300" aria-hidden="true">
           <path class="tee tee-you" d="M70 10 L130 10 L200 40 L180 95 L160 88 L160 230 L40 230 L40 88 L20 95 L0 40 Z"/>
           <path class="tee tee-size" d="M70 10 Q100 32 130 10 L200 40 L180 95 L160 88 L160 230 L40 230 L40 88 L20 95 L0 40 Z"/>
+          <g class="guides">
+            <line class="guide" data-guide="chest" x1="40" y1="100" x2="160" y2="100"/>
+            <line class="guide" data-guide="length" x1="100" y1="22" x2="100" y2="230"/>
+            <line class="guide" data-guide="shoulder" x1="38" y1="22" x2="162" y2="22"/>
+          </g>
         </svg>
-        <p class="fit-readout"><b data-readout>M</b><span class="muted">Your size</span></p>
+        <div class="fit-readout" aria-live="polite">
+          <span class="muted">Your size</span>
+          <b data-readout>M</b>
+          <p data-why></p>
+        </div>
       </div>
     </div>
     <div class="wrap">
