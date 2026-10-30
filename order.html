@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fit and order · EMK SYSTEM</title>
+<meta name="description" content="Find your size for the Peace tee and order by Instagram DM.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0a0a'/%3E%3Crect x='7' y='7' width='18' height='18' fill='none' stroke='%23d4c3a3' stroke-width='2'/%3E%3C/svg%3E">
+<script>document.documentElement.classList.add("js")</script>
+</head>
+<body data-page="order">
+<!-- @include header -->
+<main id="main">
+  <section class="section" style="padding-top:140px">
+    <div class="wrap fit">
+      <div>
+        <h1 class="display" data-split style="font-size:clamp(56px,8vw,128px)">Find your fit</h1>
+        <div class="dial">
+          <label for="chest">Lay a tee you like flat. Measure armpit to armpit.</label>
+          <input id="chest" type="range" min="22" max="28" step="0.25" value="25" data-dial>
+          <p class="dial-value" data-dial-value>25 in</p>
+        </div>
+        <div class="seg" role="group" aria-label="Fit">
+          <button type="button" aria-pressed="true" data-fit="boxy">Boxy, as cut</button>
+          <button type="button" aria-pressed="false" data-fit="closer">Closer</button>
+        </div>
+        <p class="lead" data-why style="margin-top:24px"></p>
+      </div>
+      <div class="fit-figure" aria-hidden="true">
+        <svg viewBox="-60 -40 320 300">
+          <path class="tee tee-you" d="M70 10 L130 10 L200 40 L180 95 L160 88 L160 230 L40 230 L40 88 L20 95 L0 40 Z"/>
+          <path class="tee tee-size" d="M70 10 Q100 32 130 10 L200 40 L180 95 L160 88 L160 230 L40 230 L40 88 L20 95 L0 40 Z"/>
+        </svg>
+        <p class="fit-readout"><b data-readout>M</b><span class="muted">Your size</span></p>
+      </div>
+    </div>
+    <div class="wrap">
+      <table class="size-table" data-ui>
+        <caption class="muted" style="caption-side:bottom;text-align:left;padding-top:16px">Garment measured flat, in inches.</caption>
+        <thead><tr><th scope="col">Size</th><th scope="col">Chest</th><th scope="col">Length</th><th scope="col">Shoulder</th><th scope="col">Sleeve</th></tr></thead>
+        <tbody>
+          <tr data-size="S"><td>S</td><td>24</td><td>27</td><td>23</td><td>8.5</td></tr>
+          <tr data-size="M"><td>M</td><td>25</td><td>28.25</td><td>23</td><td>8.5</td></tr>
+          <tr data-size="L"><td>L</td><td>25</td><td>29</td><td>24</td><td>8.5</td></tr>
+          <tr data-size="XL"><td>XL</td><td>26</td><td>29</td><td>24</td><td>9</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2 class="head" data-split style="margin-bottom:40px">How ordering works</h2>
+      <div class="steps">
+        <div class="step" data-reveal><h3>DM your size</h3><p>Send @emk_system a message with your size and access ID.</p></div>
+        <div class="step" data-reveal><h3>We confirm</h3><p>Stock, price and shipping, in the chat.</p></div>
+        <div class="step" data-reveal><h3>Pay and track</h3><p>Payment details come in the chat. Tracking follows when it ships.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-label="The piece">
+    <div class="wrap"><div class="strip"><figure data-clip><img src="img/print-close.webp" alt="The back print up close" loading="lazy"></figure><figure data-clip><img src="img/label-close.webp" alt="The woven chest label and barcode" loading="lazy"></figure><figure data-clip><img src="img/armenian-close.webp" alt="Խաղաղություն on the back print" loading="lazy"></figure><figure data-clip><img src="img/rooftop.webp" alt="The rooftop in Los Angeles" loading="lazy"></figure></div></div>
+  </section>
+
+  <section class="section" id="claim">
+    <div class="wrap claim">
+      <div>
+        <h2 class="head" data-split>Claim yours</h2>
+        <p class="lead muted" data-reveal style="margin-top:20px">We copy your message, then open Instagram. Paste it and send.</p>
+        <div class="claim-actions" data-reveal>
+          <button class="btn" type="button" data-claim="order">DM to claim <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-quiet" type="button" data-claim="002">Join the 002 list</button>
+          <a class="link" href="mailto:emksystem01@gmail.com?subject=Order%3A%20Peace%20tee">Email instead</a>
+        </div>
+        <p class="fine">All sales are final. Size exchanges within 14 days of delivery, unworn with tags on. Shipping is paid by the customer. We only take orders through @emk_system. Never pay anyone else.</p>
+      </div>
+      <div>
+        <div class="card-preview"><canvas data-card aria-label="Your Protocol Card" role="img"></canvas></div>
+        <p style="text-align:center;margin-top:16px"><button class="btn btn-quiet" type="button" data-save-card>Save your card</button></p>
+      </div>
+    </div>
+  </section>
+</main>
+<!-- @include footer -->
+<!-- @include bar -->
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
