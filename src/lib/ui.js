@@ -89,7 +89,8 @@ function buttons() {
     const b = e.target.closest(".btn, .seg button, .tile");
     if (!b) return;
     b.classList.add("is-pressed");
-    sound.click(); sound.buzz();
+    if (!b.hasAttribute("data-begin")) sound.click(); // Begin plays its own acknowledge
+    sound.buzz();
     const up = () => { b.classList.remove("is-pressed"); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); };
     addEventListener("pointerup", up); addEventListener("pointercancel", up);
   });
@@ -177,8 +178,7 @@ function soundToggle() {
     b.setAttribute("aria-pressed", String(sound.soundOn()));
     b.addEventListener("click", () => sound.setSound(!sound.soundOn()));
   });
-  // browsers need a gesture before audio: resume a saved "on" at the first touch
-  if (sound.soundOn()) addEventListener("pointerdown", () => sound.setSound(true), { once: true });
+  // unlocking audio on the first gesture is handled in sound.js, on every gesture until it runs
 }
 
 // ---------- shared-element page transitions: the tapped photo becomes the next page ----------

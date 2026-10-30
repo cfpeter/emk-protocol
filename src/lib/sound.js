@@ -14,10 +14,26 @@ function ensure() {
 }
 export const soundOn = () => on;
 
+// Browsers only start audio after a real gesture (tap, click, key), and every new page starts locked.
+// Keep trying on every kind of gesture until the context runs, and again whenever it gets paused
+// (tab switch, phone lock, iOS "interrupted"). Hover is not a gesture, so it cannot unlock sound.
+const GESTURES = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+const running = () => ctx?.state === "running";
+let starting = false; // a gesture asked to start: the sound that gesture triggers may play
+function unlock() {
+  if (!on || !ensure() || running() || starting) return;
+  starting = true;
+  ctx.resume().catch(() => {}).finally(() => { starting = false; });
+}
+const listen = () => GESTURES.forEach((e) => addEventListener(e, unlock, { capture: true, passive: true }));
+listen();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && ctx && !running()) ctx.resume().catch(() => {}); });
+addEventListener("pageshow", () => { if (ctx && !running()) ctx.resume().catch(() => {}); });
+
 export function setSound(v) {
   on = v;
   try { localStorage.setItem("emk-sound", v ? "1" : "0"); } catch {}
-  if (v) { ensure()?.resume(); startDrone(); } else stopDrone();
+  if (v) { unlock(); startDrone(); } else stopDrone();
   document.querySelectorAll("[data-sound]").forEach((b) => b.setAttribute("aria-pressed", String(v)));
 }
 
@@ -48,7 +64,8 @@ export function setCalm(c) {
 }
 
 function blip(freq, dur, type = "sine", gain = 0.12, when = 0) {
-  if (!on || !ensure()) return;
+  // while audio is still locked, skip the sound: queued sounds would all fire at once on the first tap
+  if (!on || !(running() || starting)) return;
   const t = ctx.currentTime + when;
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = type; o.frequency.value = freq;
@@ -56,7 +73,7 @@ function blip(freq, dur, type = "sine", gain = 0.12, when = 0) {
   o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
 }
 export const tick = () => blip(2400, 0.03, "square", 0.025);
-export const click = () => blip(520, 0.07, "triangle", 0.08);
+export const click = () => { blip(1400, 0.025, "square", 0.022); blip(2100, 0.02, "square", 0.016, 0.03); }; // a short system click, same family as the tick
 // one note per word; together they make a chord (A, C#, E)
 const NOTES = [440, 554.37, 659.25];
 export const chime = (i = 0) => { blip(NOTES[i % 3], 1.8, "sine", 0.12); blip(NOTES[i % 3] * 2, 1.2, "sine", 0.03); };
