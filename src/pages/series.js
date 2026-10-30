@@ -2,6 +2,7 @@ import { gsap, reduce } from "../lib/ui.js";
 import { setFlag, getState, ensureId, toast } from "../lib/state.js";
 import * as sound from "../lib/sound.js";
 import { initUnbox } from "../lib/unbox.js";
+import { mountCard } from "../lib/card.js";
 
 // hotspots on the real photos (u, v as fractions of each 3:4 photo)
 const SPOTS = [
@@ -79,7 +80,6 @@ export default async function series() {
   addEventListener("keydown", (e) => e.key === "Escape" && closeDetail());
 
   scanner();
-  loupe();
   unbox();
 }
 
@@ -130,18 +130,20 @@ function scanner() {
     setFlag("barcode");
     tag.textContent = "READ";
     line.setAttribute("aria-label", "Barcode read. Drag to scan it again.");
-    sound.chord(); sound.buzz(40);
-    toast("Barcode read. Protocol layer open.");
+    sound.granted(); sound.buzz(40);
+    toast("Barcode read. Your Protocol Card is ready.");
     vault.querySelector("[data-vault-id]").textContent = getState().id || ensureId();
     reveal();
   }
-  function reveal() { vault.classList.add("on"); gsap.from(vault.children, { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.8, ease: "expo.out" }); }
+  let cardOn = false;
+  const card = () => { if (!cardOn) { cardOn = true; mountCard(vault.querySelector("[data-vault-card]"), vault.querySelector("[data-vault-save]")); } };
+  function reveal() { card(); vault.classList.add("on"); gsap.from(vault.children, { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.8, ease: "expo.out" }); }
   if (done) {
     bars.forEach((b) => b.classList.add("on"));
     line.style.left = `${PARK * 100}%`;
     tag.textContent = "READ";
     vault.querySelector("[data-vault-id]").textContent = getState().id;
-    vault.classList.add("on");
+    card(); vault.classList.add("on");
   }
 }
 
@@ -164,26 +166,3 @@ async function unbox() {
   });
 }
 
-// ---------- the fabric loupe: a round lens that magnifies the real photo ----------
-function loupe() {
-  const fig = document.querySelector("[data-loupe]");
-  if (!fig) return;
-  const img = fig.querySelector("img");
-  const lens = fig.querySelector(".loupe-lens");
-  const ZOOM = 2.6;
-  lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
-  const at = (e) => {
-    const r = img.getBoundingClientRect();
-    const x = Math.max(0, Math.min(r.width, e.clientX - r.left)), y = Math.max(0, Math.min(r.height, e.clientY - r.top));
-    const L = lens.offsetWidth / 2;
-    lens.style.transform = `translate(${x - L}px, ${y - L}px)`;
-    lens.style.backgroundSize = `${r.width * ZOOM}px ${r.height * ZOOM}px`;
-    lens.style.backgroundPosition = `${-(x * ZOOM - L)}px ${-(y * ZOOM - L)}px`;
-  };
-  const show = (e) => { fig.classList.add("is-looking"); at(e); };
-  fig.addEventListener("pointerenter", show);
-  fig.addEventListener("pointerdown", (e) => { fig.setPointerCapture(e.pointerId); show(e); sound.tick(); });
-  fig.addEventListener("pointermove", (e) => fig.classList.contains("is-looking") && at(e));
-  fig.addEventListener("pointerleave", () => fig.classList.remove("is-looking"));
-  fig.addEventListener("pointerup", (e) => { if (e.pointerType !== "mouse") fig.classList.remove("is-looking"); });
-}

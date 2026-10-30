@@ -232,7 +232,9 @@ main { display: block; }
 .scan-line span { position: relative; background: var(--accent); color: var(--accent-ink); font: 600 12px/1 var(--sans); padding: 8px 6px; writing-mode: vertical-rl; }
 .vault { margin-top: 32px; display: none; }
 .vault.on { display: block; }
-.vault img { width: 100%; max-width: 420px; }
+.vault-card { margin-top: 20px; width: min(100%, 240px); aspect-ratio: 9 / 16; background: var(--surface); }
+.vault-card canvas { width: 100%; height: 100%; }
+.vault-actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; }
 
 
 /* ---------- the protocol ---------- */
@@ -466,22 +468,14 @@ main { display: block; }
 .story-copy .head { font-size: clamp(40px, 4.4vw, 72px); }
 .ritual-title { position: relative; pointer-events: auto; }
 
-/* lead: fabric loupe */
+/* lead: fabric */
 .fabric { display: grid; grid-template-columns: 5fr 6fr; gap: clamp(32px, 6vw, 112px); align-items: center; }
 .fabric-facts { margin-top: 32px; display: grid; gap: 14px; }
 .fabric-facts div { display: grid; grid-template-columns: 7rem 1fr; gap: 16px; }
 .fabric-facts dt { color: var(--muted); }
-.loupe { position: relative; justify-self: end; width: min(100%, 520px); touch-action: none; overflow: clip; }
-.loupe img { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; }
-.loupe figcaption { margin-top: 12px; font-size: 15px; }
-.loupe-lens {
-  position: absolute; left: 0; top: 0; width: 180px; height: 180px; border-radius: 50%;
-  border: 2px solid var(--accent); background-repeat: no-repeat; pointer-events: none;
-  opacity: 0; transform: scale(.6); transition: opacity .25s var(--ease-out);
-}
-.loupe.is-looking .loupe-lens { opacity: 1; }
+.fabric-photo { justify-self: end; width: min(100%, 520px); }
+.fabric-photo img { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; }
 @media (max-width: 760px) {
   .fabric { grid-template-columns: 1fr; }
-  .loupe { justify-self: center; }
-  .loupe-lens { width: 140px; height: 140px; }
+  .fabric-photo { justify-self: center; }
 }

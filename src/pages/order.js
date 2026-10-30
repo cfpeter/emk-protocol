@@ -1,6 +1,7 @@
 import { gsap, reduce } from "../lib/ui.js";
-import { setSize, getState, claim, ensureId, wordCount, onChange, toast } from "../lib/state.js";
+import { setSize, claim } from "../lib/state.js";
 import * as sound from "../lib/sound.js";
+import { mountCard } from "../lib/card.js";
 
 const SIZES = { S: [24, 27], M: [25, 28.25], L: [25, 29], XL: [26, 29] };
 const ORDER = ["S", "M", "L", "XL"];
@@ -44,38 +45,5 @@ export default function order() {
   document.querySelectorAll("[data-claim]").forEach((b) => b.addEventListener("click", () => claim(b.dataset.claim)));
 
   // ---------- the Protocol Card ----------
-  const cv = document.querySelector("[data-card]");
-  const draw = () => drawCard(cv);
-  document.fonts.ready.then(draw);
-  onChange(draw);
-  document.querySelector("[data-save-card]").addEventListener("click", async () => {
-    ensureId(); draw();
-    const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
-    const file = new File([blob], `${getState().id}-emk-protocol.png`, { type: "image/png" });
-    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: "EMK SYSTEM · Peace Protocol" }); return; } catch {} }
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
-    toast("Card saved. Post it and tag @emk_system.");
-  });
-}
-
-function drawCard(cv) {
-  const s = getState();
-  const W = 1080, H = 1920, c = cv.getContext("2d");
-  cv.width = W; cv.height = H;
-  c.fillStyle = "#0a0a0a"; c.fillRect(0, 0, W, H);
-  const cream = "#e8e0cc", gold = "#d4c3a3", dim = "#3a3732";
-  c.strokeStyle = cream; c.lineWidth = 10; c.strokeRect(120, 520, W - 240, 820);
-  c.fillStyle = cream; c.textAlign = "left";
-  c.font = "600 44px Archivo"; c.fillText("EMK SYSTEM™", 120, 300);
-  c.font = "500 34px Archivo"; c.fillStyle = "#a9a294"; c.fillText("PEACE PROTOCOL · SERIES-001", 120, 360);
-  const words = [["peace", "PEACE", "600 150px Archivo", "ltr"], ["salam", "سلام", "700 170px 'Noto Naskh Arabic'", "rtl"], ["khaghaghutyun", "Խաղաղություն", "700 92px 'Noto Serif Armenian'", "ltr"]];
-  c.textAlign = "center";
-  words.forEach(([k, t, f, dir], i) => {
-    c.font = f; c.direction = dir; c.fillStyle = (s.words || []).includes(k) ? cream : dim;
-    c.fillText(t, W / 2, 700 + i * 250); c.direction = "ltr";
-  });
-  c.textAlign = "left"; c.fillStyle = gold; c.font = "600 120px Archivo"; c.fillText(s.id || "PCE-····", 120, 1560);
-  c.fillStyle = cream; c.font = "500 40px Archivo";
-  c.fillText(`${wordCount()}/3 words${s.size ? ` · Size ${s.size}` : ""}${s.since ? ` · ${s.since}` : ""}`, 120, 1640);
-  c.fillStyle = "#a9a294"; c.font = "500 36px Archivo"; c.fillText("Move with intention. Peace is power.", 120, 1760); c.fillText("@emk_system", 120, 1820);
+  mountCard(document.querySelector("[data-card]"), document.querySelector("[data-save-card]"));
 }
