@@ -94,10 +94,13 @@ function buttons() {
   if (!fine || reduce) return;
   document.querySelectorAll(".btn").forEach((el) => {
     const xTo = gsap.quickTo(el, "x", { duration: 0.45 }), yTo = gsap.quickTo(el, "y", { duration: 0.45 });
-    el.addEventListener("pointermove", (e) => {
+    // measure once on enter (minus the pull already applied), never on every move
+    let cx = 0, cy = 0;
+    el.addEventListener("pointerenter", () => {
       const r = el.getBoundingClientRect();
-      xTo((e.clientX - r.left - r.width / 2) * 0.18); yTo((e.clientY - r.top - r.height / 2) * 0.22);
+      cx = r.left + r.width / 2 - (gsap.getProperty(el, "x") || 0); cy = r.top + r.height / 2 - (gsap.getProperty(el, "y") || 0);
     });
+    el.addEventListener("pointermove", (e) => { xTo((e.clientX - cx) * 0.18); yTo((e.clientY - cy) * 0.22); });
     el.addEventListener("pointerleave", () => { xTo(0); yTo(0); });
   });
 }
@@ -109,16 +112,32 @@ function cursor() {
   const dot = c.querySelector(".cursor-dot"), ring = c.querySelector(".cursor-ring"), label = c.querySelector(".cursor-label");
   const dx = gsap.quickTo(dot, "x", { duration: 0.08 }), dy = gsap.quickTo(dot, "y", { duration: 0.08 });
   const rx = gsap.quickTo(ring, "x", { duration: 0.4 }), ry = gsap.quickTo(ring, "y", { duration: 0.4 });
-  addEventListener("pointermove", (e) => {
-    if (e.pointerType !== "mouse") return;
-    dx(e.clientX); dy(e.clientY); rx(e.clientX); ry(e.clientY);
-    const t = e.target.closest?.("[data-cursor], a, button, input");
-    const word = t?.dataset?.cursor;
+  let px = -1, py = -1, shown = "", queued = false;
+  const read = (el) => {
+    const t = el?.closest?.("[data-cursor], a, button, input");
+    const word = t?.dataset?.cursor || "";
+    const kind = word ? `w:${word}` : t ? "link" : "";
+    if (kind === shown) return; // touch the DOM only when the state changes
+    shown = kind;
     c.classList.toggle("is-label", Boolean(word));
     c.classList.toggle("is-link", Boolean(t) && !word);
     if (word) label.textContent = word;
+  };
+  // scrolling moves content under a still mouse: re-read what's under it, once per frame
+  const recheck = () => {
+    if (queued || px < 0) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; read(document.elementFromPoint(px, py)); });
+  };
+  addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return;
+    px = e.clientX; py = e.clientY;
+    dx(px); dy(py); rx(px); ry(py);
+    read(e.target);
   }, { passive: true });
-  document.addEventListener("pointerleave", () => c.classList.remove("is-label", "is-link"));
+  addEventListener("scroll", recheck, { passive: true });
+  document.addEventListener("cursor:refresh", () => { shown = "?"; recheck(); }); // a page changed a data-cursor
+  document.addEventListener("pointerleave", () => { shown = ""; px = -1; c.classList.remove("is-label", "is-link"); });
 }
 
 // ---------- reveals: headings rise word by word, blocks lift, photos wipe open ----------

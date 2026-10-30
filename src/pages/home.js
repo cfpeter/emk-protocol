@@ -1,21 +1,19 @@
 import { gsap, ScrollTrigger, fine, reduce } from "../lib/ui.js";
 import { initRitual } from "../lib/ritual.js";
-import { initFigure } from "../lib/figure.js";
 
 export default async function home() {
   initRitual(document.querySelector(".ritual"));
 
-  // the tee turns from its back print to its chest label as you scroll
-  const turn = document.querySelector(".turn");
-  const stage = turn.querySelector(".turn-stage");
-  initFigure(stage, stage.querySelector("canvas"), { scrollTurn: true }).then((fig) => {
-    if (!fig) return;
-    ScrollTrigger.create({ trigger: turn, start: "top top", end: "bottom bottom", onUpdate: (s) => fig.setProgress(s.progress) });
-  });
-  if (!reduce) {
-    gsap.timeline({ scrollTrigger: { trigger: turn, start: "top top", end: "bottom bottom", scrub: 1 } })
-      .fromTo(".turn-copy [data-step='1']", { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.2 }, 0.35)
-      .fromTo(".turn-copy [data-step='2']", { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.2 }, 0.45);
+  // the story: the back print wipes over to the chest label as you scroll
+  const story = document.querySelector(".story");
+  if (story && !reduce) {
+    gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: story, start: "top top", end: "bottom bottom", scrub: 0.8 } })
+      .fromTo(".story-back", { scale: 1.12 }, { scale: 1, duration: 0.45 }, 0)
+      .fromTo(".story-front", { clipPath: "inset(0 0 0 100%)", scale: 1.08 }, { clipPath: "inset(0 0 0 0%)", scale: 1, duration: 0.35 }, 0.45)
+      .to(".story-back", { scale: 0.96, autoAlpha: 0.4, duration: 0.35 }, 0.45)
+      .to(".story-steps [data-step='1']", { autoAlpha: 0, y: -16, duration: 0.12 }, 0.42)
+      .fromTo(".story-steps [data-step='2']", { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.14 }, 0.58)
+      .fromTo(".story-progress span", { scaleX: 0 }, { scaleX: 1, duration: 1 }, 0);
   }
 
   // tiles tilt toward the pointer

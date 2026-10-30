@@ -1,10 +1,3 @@
-import "@fontsource/archivo/400.css";
-import "@fontsource/archivo/500.css";
-import "@fontsource/archivo/600.css";
-import "@fontsource/bodoni-moda/500.css";
-import "@fontsource/noto-naskh-arabic/700.css";
-import "@fontsource/noto-serif-armenian/700.css";
-import "./styles.css";
 import { startUI } from "./lib/ui.js";
 
 startUI();

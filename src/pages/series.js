@@ -1,51 +1,70 @@
 import { gsap, reduce } from "../lib/ui.js";
-import { initFigure } from "../lib/figure.js";
 import { setFlag, getState, ensureId, toast } from "../lib/state.js";
 import * as sound from "../lib/sound.js";
 import { initUnbox } from "../lib/unbox.js";
 
-// hotspots: where they sit on each photo (u, v from top-left of the cut-out)
+// hotspots on the real photos (u, v as fractions of each 3:4 photo)
 const SPOTS = [
-  { side: "back", u: 0.52, v: 0.36, title: "The back print", text: "PEACE, سلام and Խաղաղություն inside one cream frame.", img: "img/print-close.webp" },
-  { side: "back", u: 0.53, v: 0.53, title: "Խաղաղություն", text: "Armenian for peace, said khaghaghutyun.", img: "img/armenian-close.webp" },
-  { side: "front", u: 0.70, v: 0.42, title: "The woven label", text: "PEACE and سلام with the series barcode, on the left chest.", img: "img/label-close.webp" },
-  { side: "front", u: 0.30, v: 0.84, title: "The hem tag", text: "A small EMK tag at the hem. TODO(founders): confirm detail.", img: "img/front.webp" },
+  { side: "back", u: 0.55, v: 0.47, title: "The back print", text: "PEACE, سلام and Խաղաղություն inside one cream frame.", img: "img/print-art.webp" },
+  { side: "back", u: 0.53, v: 0.615, title: "Խաղաղություն", text: "Armenian for peace, said khaghaghutyun.", img: "img/print-art.webp" },
+  { side: "back", u: 0.37, v: 0.745, title: "The hem print", text: "A barcode print at the hem: EMK-001 / Peace Collection.", img: "img/hem.webp" },
+  { side: "front", u: 0.705, v: 0.41, title: "The woven label", text: "PEACE and سلام on the left chest, with the series barcode PCE24LDN8T004.", img: "img/label.webp" },
+  { side: "front", u: 0.645, v: 0.495, title: "The barcode", text: "Scan it further down this page to open the protocol layer.", img: "img/label-tag.webp" },
 ];
+// where "Closer" zooms in on each side
+const FOCUS = { back: "55% 52%", front: "68% 45%" };
 
 export default async function series() {
   const piece = document.querySelector(".piece");
-  const layer = piece.querySelector(".hotspots");
   const detail = document.querySelector("[data-detail]");
-  const fig = await initFigure(piece, piece.querySelector("canvas"), { drag: true, scrollTurn: false });
+  const zoomEl = piece.querySelector(".piece-zoom");
+  const sides = Object.fromEntries([...piece.querySelectorAll(".piece-side")].map((el) => [el.dataset.side, el]));
+  let face = "back", zoomed = false;
 
-  // front / back
-  piece.querySelectorAll("[data-face]").forEach((b) => b.addEventListener("click", () => {
-    piece.querySelectorAll("[data-face]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    fig?.setFace(b.dataset.face);
-  }));
-  piece.querySelector("[data-zoom]")?.addEventListener("click", (e) => {
-    const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
-    e.currentTarget.setAttribute("aria-pressed", String(on));
-    fig?.zoomBy(on ? 1 : -1);
-  });
-
-  // hotspots follow the figure and only show on the side facing you
-  const dots = SPOTS.map((s, i) => {
+  // hotspots sit on the photos themselves, so they move and zoom with them
+  SPOTS.forEach((s) => {
     const b = document.createElement("button");
     b.className = "hotspot"; b.type = "button"; b.setAttribute("aria-label", s.title); b.dataset.cursor = "Open";
+    b.style.left = `${s.u * 100}%`; b.style.top = `${s.v * 100}%`;
     b.addEventListener("click", () => openDetail(s));
-    layer.appendChild(b);
-    return b;
+    sides[s.side].querySelector(".hotspots").appendChild(b);
   });
-  if (fig) {
-    fig.onFrame(() => {
-      SPOTS.forEach((s, i) => {
-        const p = fig.project(s.side, s.u, s.v);
-        dots[i].style.transform = `translate(${p.x}px, ${p.y}px)`;
-        dots[i].classList.toggle("is-away", !p.facing);
-      });
+
+  // back / front: the new side wipes in over the old one
+  piece.querySelectorAll("[data-face]").forEach((b) => b.addEventListener("click", () => {
+    const next = b.dataset.face;
+    if (next === face) return;
+    piece.querySelectorAll("[data-face]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    const from = sides[face], to = sides[next];
+    gsap.set(to, { zIndex: 2 }); gsap.set(from, { zIndex: 1 });
+    to.classList.add("is-on");
+    gsap.fromTo(to, { clipPath: next === "front" ? "inset(0 0 0 100%)" : "inset(0 100% 0 0)" }, {
+      clipPath: "inset(0 0% 0 0%)", duration: reduce ? 0 : 0.8, ease: "power3.inOut",
+      onComplete: () => from.classList.remove("is-on"),
     });
-  } else dots.forEach((d) => d.classList.add("is-away"));
+    gsap.fromTo(to.querySelector("img"), { scale: 1.08 }, { scale: 1, duration: reduce ? 0 : 1.1, ease: "power3.out" });
+    face = next;
+    zoomEl.style.transformOrigin = FOCUS[face];
+    sound.tick();
+  }));
+
+  // closer: a smooth zoom into the print or the label; with a mouse, the view follows the pointer
+  const zoomBtn = piece.querySelector("[data-zoom]");
+  const setZoom = (on) => {
+    zoomed = on;
+    zoomBtn.setAttribute("aria-pressed", String(on));
+    zoomBtn.textContent = on ? "Full view" : "Closer";
+    zoomEl.style.transformOrigin = FOCUS[face];
+    gsap.to(zoomEl, { scale: on ? 2.1 : 1, duration: reduce ? 0 : 0.9, ease: "power3.inOut" });
+  };
+  zoomBtn.addEventListener("click", () => setZoom(!zoomed));
+  const frame = piece.querySelector(".piece-frame");
+  frame.addEventListener("pointermove", (e) => {
+    if (!zoomed || e.pointerType !== "mouse") return;
+    const r = frame.getBoundingClientRect();
+    zoomEl.style.transformOrigin = `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
+  });
+  frame.addEventListener("pointerleave", () => zoomed && (zoomEl.style.transformOrigin = FOCUS[face]));
 
   function openDetail(s) {
     detail.querySelector("img").src = s.img;
@@ -73,7 +92,7 @@ function scanner() {
   barsEl.innerHTML = "<i></i>".repeat(BARS);
   const bars = [...barsEl.children];
   const vault = document.querySelector("[data-vault]");
-  const x0 = 0.40, x1 = 0.80;
+  const x0 = 0.31, x1 = 0.73;
   let dragging = false, done = getState().flags?.barcode, lit = 0;
   const setX = (fx) => {
     line.style.left = `${fx * 100}%`;
@@ -103,9 +122,10 @@ function scanner() {
 async function unbox() {
   const stage = document.querySelector(".unbox-stage");
   if (!stage) return;
-  const hint = stage.querySelector("[data-unbox-hint]");
-  const openBtn = stage.querySelector("[data-unbox-open]");
-  const closeBtn = stage.querySelector("[data-unbox-close]");
+  const wrap = stage.closest(".unbox");
+  const hint = wrap.querySelector("[data-unbox-hint]");
+  const openBtn = wrap.querySelector("[data-unbox-open]");
+  const closeBtn = wrap.querySelector("[data-unbox-close]");
   const box = await initUnbox(stage);
   if (!box) { hint.textContent = "Matte black, gold foil, black tissue, a card, a seal and the tee."; openBtn.hidden = true; return; }
   openBtn.addEventListener("click", () => { box.openAll(); openBtn.hidden = true; closeBtn.hidden = false; });

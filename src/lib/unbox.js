@@ -8,6 +8,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { gsap } from "gsap";
 import * as sound from "./sound.js";
+import { whenNear } from "./near.js";
 
 const { smoothstep, damp, clamp, lerp } = THREE.MathUtils;
 const GOLD = "#cdb17a";
@@ -15,13 +16,18 @@ const W = 3.0, D = 2.1, H = 0.62, T = 0.05; // base box (outer), wall thickness
 const LH = 0.5, LG = 0.035;                  // lid wall height, lid gap
 
 // ---------- printed surfaces, drawn once ----------
-function canvasTex(w, h, draw, srgb = true) {
+// Q scales every canvas: 1 on desktop (2048 lid maps), 0.5 on phones (1024: a quarter of the
+// memory, and still sharper than the lid ever appears on a phone screen). ANISO is set per renderer.
+let Q = 1, ANISO = 8;
+function canvasTex(w, h, draw, srgb = true, scale = Q) {
   const c = document.createElement("canvas");
-  c.width = w; c.height = h;
-  draw(c.getContext("2d"), w, h);
+  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  const ctx = c.getContext("2d");
+  ctx.scale(c.width / w, c.height / h); // draw in design units, whatever the resolution
+  draw(ctx, w, h);
   const t = new THREE.CanvasTexture(c);
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = ANISO;
   return t;
 }
 // lid top: matte black with gold foil text; a second map marks the foil as metal
@@ -34,7 +40,7 @@ function lidTop() {
     ctx.letterSpacing = "8px"; ctx.font = "500 32px Archivo"; ctx.fillText("LOS ANGELES", w / 2, h * 0.615);
   };
   const map = canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, false));
-  const foil = canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, true), false);
+  const foil = canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, true), false, Q / 2);
   return { map, foil };
 }
 function lidUnder() {
@@ -44,7 +50,7 @@ function lidUnder() {
     ctx.font = "500 92px Archivo"; ctx.fillText("MADE WITH INTENTION", w / 2, h * 0.44);
     ctx.font = "500 92px Archivo"; ctx.fillText("PEACE · UNITY · CULTURE", w / 2, h * 0.58);
   };
-  return { map: canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, false)), foil: canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, true), false) };
+  return { map: canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, false)), foil: canvasTex(2048, 1434, (c, w, h) => paint(c, w, h, true), false, Q / 2) };
 }
 function card() {
   return canvasTex(600, 840, (c, w, h) => {
@@ -86,6 +92,14 @@ function tissue() {
     c.restore();
   });
 }
+// a soft pool of warm light under the box, so it separates from the page
+function poolTex() {
+  return canvasTex(256, 256, (c) => {
+    const g = c.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, "rgba(255,236,205,.16)"); g.addColorStop(0.45, "rgba(255,236,205,.06)"); g.addColorStop(1, "rgba(255,236,205,0)");
+    c.fillStyle = g; c.fillRect(0, 0, 256, 256);
+  }, true, 1);
+}
 function shadowTex() {
   return canvasTex(256, 256, (c) => {
     const g = c.createRadialGradient(128, 128, 20, 128, 128, 128);
@@ -110,10 +124,17 @@ function crumple(w, d, seed) {
 
 export async function initUnbox(stage) {
   const canvas = stage.querySelector("canvas");
+  // built only when the box is within a screen of the viewport: the Series page then never
+  // holds two live WebGL scenes at load, and phones skip ~40 MB of lid textures until needed
+  await whenNear(stage, 800);
+  const coarse = matchMedia("(pointer: coarse)").matches || /Instagram/i.test(navigator.userAgent);
   let renderer;
-  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" }); } catch { return null; }
-  const phone = () => stage.clientWidth < 760;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia("(pointer: coarse)").matches ? 1.5 : 2));
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: !coarse, powerPreference: "high-performance" }); } catch { return null; }
+  Q = coarse || innerWidth < 760 ? 0.5 : 1;
+  ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const phone = () => view.w < 760;
+  const view = { w: 1, h: 1 };
+  renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.5 : 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.setClearColor(0x0a0a0a, 1);
@@ -125,16 +146,21 @@ export async function initUnbox(stage) {
 
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.35;
+  const room = new RoomEnvironment();
+  scene.environment = pmrem.fromScene(room, 0.04).texture;
+  room.dispose(); pmrem.dispose();
+  scene.environmentIntensity = 0.4;
 
-  const key = new THREE.DirectionalLight(0xfff1dc, 2.2); key.position.set(-4, 6, 2); scene.add(key);
-  const side = new THREE.DirectionalLight(0xfff1dc, 1.1); side.position.set(-5, 1.2, 4); scene.add(side);
-  const rim = new THREE.DirectionalLight(0xcfd8ff, 0.8); rim.position.set(4, 3, -4); scene.add(rim);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.08));
+  // matte black that still reads on a near-black page: a lifted base colour, a strong cool rim
+  // that draws the box's top edges, and a side light that separates the walls from the floor
+  const key = new THREE.DirectionalLight(0xfff1dc, 2.4); key.position.set(-4, 6, 2); scene.add(key);
+  const side = new THREE.DirectionalLight(0xfff1dc, 1.5); side.position.set(-5, 1.2, 4); scene.add(side);
+  const rim = new THREE.DirectionalLight(0xdfe6ff, 2.4); rim.position.set(4, 3.5, -4); scene.add(rim);
+  const fill = new THREE.DirectionalLight(0xffe9cc, 0.6); fill.position.set(5, 1.5, 5); scene.add(fill);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.12));
 
-  const black = new THREE.MeshStandardMaterial({ color: 0x0e0e0e, roughness: 0.82, metalness: 0 });
-  const inner = new THREE.MeshStandardMaterial({ color: 0x090909, roughness: 0.95 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x161514, roughness: 0.78, metalness: 0 });
+  const inner = new THREE.MeshStandardMaterial({ color: 0x0f0e0d, roughness: 0.95 });
 
   // ---------- base tray ----------
   const set = new THREE.Group(); set.rotation.y = -0.22; scene.add(set);
@@ -145,20 +171,25 @@ export async function initUnbox(stage) {
   slab(T, H, D - 2 * T, W / 2 - T / 2, H / 2, 0); slab(T, H, D - 2 * T, -W / 2 + T / 2, H / 2, 0);
   slab(W - 2 * T, 0.01, D - 2 * T, 0, T + 0.005, 0, inner);
 
-  // the folded tee, back print up
+  // the folded tee: a real top-down photo of it (neck label, hang tag, chest label) across the
+  // fold's top face, with trilinear mipmaps and the GPU's full anisotropy for the grazing view
   const loader = new THREE.TextureLoader();
-  const printTex = await loader.loadAsync("img/print-art.webp");
+  const printTex = await loader.loadAsync("img/folded.webp");
   printTex.colorSpace = THREE.SRGBColorSpace;
+  printTex.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+  printTex.minFilter = THREE.LinearMipmapLinearFilter; printTex.generateMipmaps = true;
+  const FOLD_W = 2.1, FOLD_D = FOLD_W / (printTex.image.width / printTex.image.height); // 1.35: the photo's own aspect
   const fabric = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
   const tee = new THREE.Group();
-  const fold = new THREE.Mesh(new RoundedBoxGeometry(2.1, 0.2, 1.55, 4, 0.08), fabric);
+  const fold = new THREE.Mesh(new RoundedBoxGeometry(FOLD_W, 0.2, FOLD_D, 4, 0.08), fabric);
   tee.add(fold);
-  const print = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.22), new THREE.MeshStandardMaterial({ map: printTex, roughness: 0.9 }));
-  print.rotation.x = -Math.PI / 2; print.position.y = 0.101; tee.add(print);
+  // the top face, inset to where the rounded edge starts to fall away (neck toward the back)
+  const print = new THREE.Mesh(new THREE.PlaneGeometry(FOLD_W - 0.07, FOLD_D - 0.07), new THREE.MeshStandardMaterial({ map: printTex, roughness: 0.88 }));
+  print.rotation.x = -Math.PI / 2; print.position.y = 0.1005; tee.add(print);
   tee.position.set(0, T + 0.12, 0.02); base.add(tee);
 
   // tissue: two flaps hinged at the long walls
-  const tissueMat = new THREE.MeshStandardMaterial({ map: tissue(), roughness: 0.9, side: THREE.DoubleSide, transparent: true, opacity: 0.97 });
+  const tissueMat = new THREE.MeshStandardMaterial({ map: tissue(), roughness: 0.9, side: THREE.DoubleSide });
   const flapW = (W - 2 * T) / 2 + 0.12, flapD = D - 2 * T;
   const flap = (side, seed) => {
     const hinge = new THREE.Group(); hinge.position.set(side * (W / 2 - T), H - 0.06, 0);
@@ -174,8 +205,10 @@ export async function initUnbox(stage) {
     return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats);
   };
   const cardM = thin(0.72, 1.0, card(), 0.015); cardM.position.set(-0.78, H - 0.02, -0.1); cardM.rotation.y = 0.06; base.add(cardM);
+  // a cylinder's cap maps texture u along +z; a quarter turn makes "EMK SYSTEM™" read left to right
+  const SEAL_TURN = Math.PI / 2;
   const sealM = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.006, 48), [black, new THREE.MeshStandardMaterial({ map: seal(), roughness: 0.5 }), black]);
-  sealM.position.set(-0.05, H - 0.022, 0.22); base.add(sealM);
+  sealM.position.set(-0.05, H - 0.022, 0.22); sealM.rotation.y = SEAL_TURN; base.add(sealM);
   const stickerM = thin(0.62, 0.62, sticker(), 0.004); stickerM.position.set(0.82, H - 0.02, 0.1); stickerM.rotation.y = -0.08; base.add(stickerM);
 
   // ---------- lid ----------
@@ -197,18 +230,26 @@ export async function initUnbox(stage) {
 
   // soft contact shadows (cheap on every device)
   const shTex = shadowTex();
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.7, D * 1.8), new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false, opacity: 0.9 }));
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.7, D * 1.8), new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false, opacity: 0.9 })); // taste-skill-ignore: a 3D contact shadow under the box, not a CSS shadow
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.001; set.add(shadow);
   const lidShadow = shadow.clone(); lidShadow.material = shadow.material.clone(); set.add(lidShadow);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0b0b0b, roughness: 1 }));
+  // a table tone around the box that fades into the page colour with distance (no hard stage edge)
+  scene.fog = new THREE.Fog(0x0a0a0a, 8, 16);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0f0e0d, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(W * 4.2, D * 4.6), new THREE.MeshBasicMaterial({ map: poolTex(), transparent: true, depthWrite: false, toneMapped: false }));
+  pool.rotation.x = -Math.PI / 2; pool.position.y = 0.0005; set.add(pool);
 
   // ---------- camera ----------
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
   const look = new THREE.Vector3(0, 0.35, 0);
+  let dirty = true;
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    view.w = w; view.h = h;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    dirty = true;
   }
   new ResizeObserver(resize).observe(stage); resize();
 
@@ -219,7 +260,10 @@ export async function initUnbox(stage) {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function pose(dt) {
-    p = reduce ? target : damp(p, target, 4.5, dt);
+    const prev = p;
+    p = reduce ? target : damp(p, target, 4.2, dt);
+    if (Math.abs(target - p) < 1e-4) p = target;
+    const opening = p > prev;
     // 1. lid: slides up slowly (air resistance), then leans against the back, inside print facing you
     const lift = smoothstep(p, 0.02, 0.24), tip = smoothstep(p, 0.22, 0.44);
     const arc = Math.sin(tip * Math.PI) * 0.5;
@@ -236,7 +280,7 @@ export async function initUnbox(stage) {
     };
     place(cardM, [-0.78, H - 0.02, -0.1, 0.06], [-W / 2 - 0.75, 0.01, 0.35], it(0.44, 0.56), 0.32);
     place(stickerM, [0.82, H - 0.02, 0.1, -0.08], [W / 2 + 0.6, 0.004, 0.55], it(0.48, 0.6), -0.4);
-    place(sealM, [-0.05, H - 0.022, 0.22, 0], [W / 2 + 0.45, 0.004, -0.35], it(0.52, 0.62), 0);
+    place(sealM, [-0.05, H - 0.022, 0.22, SEAL_TURN], [W / 2 + 0.45, 0.004, -0.35], it(0.52, 0.62), SEAL_TURN + 0.25);
     // 3. tissue folds open over the walls
     const open = smoothstep(p, 0.62, 0.8);
     flapL.rotation.z = open * 2.25; flapR.rotation.z = -open * 2.25;
@@ -248,7 +292,9 @@ export async function initUnbox(stage) {
     camera.position.set(Math.sin(mx * 0.15) * r * 0.25 + r * 0.08, r * 0.62 + my * 0.2, r * 0.78);
     look.set(0, 0.25 + p * 0.15, -0.15);
     camera.lookAt(look);
-    // sound beats
+    // sound beats: only while opening, and re-armed once the box is shut again
+    if (p < 0.01) Object.keys(beats).forEach((k) => (beats[k] = false));
+    if (!opening) return;
     if (lift > 0.05) beat("lift", () => sound.friction());
     if (tip > 0.6) beat("off", () => sound.click());
     if (open > 0.2) beat("tissue", () => sound.friction());
@@ -256,35 +302,47 @@ export async function initUnbox(stage) {
   }
 
   // drag up (or wheel/keys) to open; release keeps it where it is, past 90% it finishes
-  let y0 = null, startT = 0;
-  canvas.addEventListener("pointerdown", (e) => { y0 = e.clientY; startT = target; canvas.setPointerCapture(e.pointerId); });
+  let y0 = null, startT = 0, tween = null;
+  const stopTween = () => { tween?.kill(); tween = null; };
+  const tweenTo = (v, duration, ease) => {
+    stopTween();
+    const o = { v: target };
+    tween = gsap.to(o, { v, duration: reduce ? 0 : duration, ease, onUpdate: () => { target = o.v; } });
+  };
+  canvas.addEventListener("pointerdown", (e) => { stopTween(); y0 = e.clientY; startT = target; canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener("pointermove", (e) => {
     tx = (e.clientX / innerWidth) * 2 - 1; ty = (e.clientY / innerHeight) * 2 - 1;
     if (y0 == null) return;
-    target = clamp(startT + (y0 - e.clientY) / (stage.clientHeight * 0.75), 0, 1);
+    target = clamp(startT + (y0 - e.clientY) / (view.h * 0.75), 0, 1);
   });
-  const release = () => { if (y0 == null) return; y0 = null; if (target > 0.9) target = 1; };
+  const release = () => { if (y0 == null) return; y0 = null; if (target > 0.9) tweenTo(1, 0.9, "power2.out"); };
   canvas.addEventListener("pointerup", release); canvas.addEventListener("pointercancel", release);
   canvas.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowUp" || e.key === "ArrowRight") { e.preventDefault(); target = clamp(target + 0.1, 0, 1); }
-    if (e.key === "ArrowDown" || e.key === "ArrowLeft") { e.preventDefault(); target = clamp(target - 0.1, 0, 1); }
+    if (e.key === "ArrowUp" || e.key === "ArrowRight") { e.preventDefault(); stopTween(); target = clamp(target + 0.1, 0, 1); }
+    if (e.key === "ArrowDown" || e.key === "ArrowLeft") { e.preventDefault(); stopTween(); target = clamp(target - 0.1, 0, 1); }
   });
 
   let visible = true;
-  new IntersectionObserver(([en]) => { visible = en.isIntersecting; }, { rootMargin: "100px" }).observe(stage);
+  new IntersectionObserver(([en]) => { visible = en.isIntersecting; if (visible) dirty = true; }, { rootMargin: "100px" }).observe(stage);
+  // upload every texture and compile every shader before the first visible frame
+  scene.traverse((o) => { const ms = o.material ? [].concat(o.material) : []; ms.forEach((m) => ["map", "metalnessMap"].forEach((k) => m[k] && renderer.initTexture(m[k]))); });
   await renderer.compileAsync(scene, camera);
   stage.classList.add("has-webgl");
+  // render on demand: a box at rest costs nothing, which leaves the GPU to the tee above it
   gsap.ticker.add((_t, dms) => {
     if (!visible || document.hidden) return;
     const dt = Math.min(dms / 1000, 0.05);
+    const moving = dirty || Math.abs(target - p) > 1e-4 || Math.abs(tx - mx) > 1e-4 || Math.abs(ty - my) > 1e-4;
+    if (!moving) return;
+    dirty = false;
     mx = damp(mx, tx, 3, dt); my = damp(my, ty, 3, dt);
     pose(dt);
     renderer.render(scene, camera);
   });
 
   return {
-    openAll() { gsap.to({ v: target }, { v: 1, duration: reduce ? 0 : 3.4, ease: "power1.inOut", onUpdate() { target = this.targets()[0].v; } }); },
-    close() { target = 0; Object.keys(beats).forEach((k) => (beats[k] = false)); },
+    openAll() { tweenTo(1, 3.6, "sine.inOut"); },
+    close() { tweenTo(0, 1.8, "power2.inOut"); },
     get progress() { return p; },
   };
 }
