@@ -138,7 +138,9 @@ function gate() {
   const cover = piece.querySelector("[data-gate]"), line = piece.querySelector("[data-gate-line]");
   const copy = piece.querySelector("[data-gate-copy]"), status = piece.querySelector("[data-gate-status]");
   const lead = piece.querySelector("[data-piece-lead]"), frame = piece.querySelector(".piece-frame");
-  if (!cover || getState().flags?.barcode || getState().flags?.gate) return; // read (or skipped) once, open for good
+  // read (or skipped) once, open for good; series.html?scan shows it again
+  const again = new URLSearchParams(location.search).has("scan");
+  if (!cover || (!again && (getState().flags?.barcode || getState().flags?.gate))) return;
   const LEAD = lead.textContent;
   const BARS = 24, X0 = 0.31, X1 = 0.73, START = 0.06; // where the barcode sits across the label
   let pos = START, read = 0, open = false, dragging = false, auto = null;
