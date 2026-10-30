@@ -73,11 +73,11 @@ export function toast(msg) {
 
 // ---------- DM to claim: copy the message, then open Instagram ----------
 export async function claim(kind = "order") {
-  const id = ensureId();
+  // the access ID stays out of the DM: it is a site keepsake, not an order or customer number
   const size = state.size ? `size ${state.size}` : "size ?";
   const text = kind === "002"
-    ? `Hi EMK SYSTEM, add me to Series 002, ${size}. ${id}`
-    : `Hi EMK SYSTEM, I'd like Peace tee 001, ${size}. ${id}`;
+    ? `Hi EMK SYSTEM, add me to Series 002, ${size}.`
+    : `Hi EMK SYSTEM, I'd like Peace tee 001, ${size}.`;
   try { await navigator.clipboard.writeText(text); toast("Message copied. Paste it in the DM."); }
   catch { toast(text); }
   setTimeout(() => { location.href = "https://ig.me/m/emk_system"; }, 700);
