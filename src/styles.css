@@ -471,8 +471,8 @@ main { display: block; }
 .fabric-facts { margin-top: 32px; display: grid; gap: 14px; }
 .fabric-facts div { display: grid; grid-template-columns: 7rem 1fr; gap: 16px; }
 .fabric-facts dt { color: var(--muted); }
-.loupe { position: relative; justify-self: end; width: min(100%, 520px); touch-action: none; }
-.loupe img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.loupe { position: relative; justify-self: end; width: min(100%, 520px); touch-action: none; overflow: clip; }
+.loupe img { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; }
 .loupe figcaption { margin-top: 12px; font-size: 15px; }
 .loupe-lens {
   position: absolute; left: 0; top: 0; width: 180px; height: 180px; border-radius: 50%;

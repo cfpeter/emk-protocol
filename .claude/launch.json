@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "emk-protocol", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "npx vite --port ${PORT:-4420} --strictPort"], "port": 4420, "autoPort": true },
+    { "name": "emk-protocol-build", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "npx vite preview --port ${PORT:-4421} --strictPort"], "port": 4421, "autoPort": true }
+  ]
+}
