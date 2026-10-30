@@ -61,12 +61,17 @@ export const click = () => blip(520, 0.07, "triangle", 0.08);
 const NOTES = [440, 554.37, 659.25];
 export const chime = (i = 0) => { blip(NOTES[i % 3], 1.8, "sine", 0.12); blip(NOTES[i % 3] * 2, 1.2, "sine", 0.03); };
 export const chord = () => NOTES.forEach((n, i) => blip(n, 2.6, "sine", 0.08, i * 0.06));
-export function friction() {
-  if (!on || !ensure()) return;
-  const len = ctx.sampleRate * 0.25, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.4;
-  const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-  f.type = "bandpass"; f.frequency.value = 900; g.gain.value = 0.25;
-  s.buffer = buf; s.connect(f); f.connect(g); g.connect(master); s.start();
-}
+// system sounds: built from the same short square pulse as the typing tick
+const pulse = (freq, when = 0, dur = 0.035, gain = 0.03) => blip(freq, dur, "square", gain, when);
+// Begin: a two-step acknowledge, like a terminal accepting a command
+export const ack = () => { pulse(1600, 0); pulse(2400, 0.07); };
+// a mechanism moving: a quick run of ticks that speeds up and climbs
+export const servo = (up = true) => {
+  const steps = [0, 0.05, 0.09, 0.12, 0.145, 0.165];
+  steps.forEach((t, i) => pulse(up ? 1800 + i * 160 : 2600 - i * 160, t, 0.02, 0.022));
+};
+// a latch releasing: high then low
+export const latch = () => { pulse(3200, 0, 0.02, 0.025); pulse(2000, 0.035, 0.03, 0.025); };
+// access granted: a three-step readout with a longer last pulse
+export const granted = () => { pulse(1200, 0); pulse(1600, 0.09); pulse(2400, 0.18, 0.14, 0.03); };
 export const buzz = (ms = 8) => { try { navigator.vibrate?.(ms); } catch {} };

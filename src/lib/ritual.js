@@ -242,7 +242,7 @@ export async function initRitual(root) {
   ui.begin.addEventListener("click", () => {
     ensureId();
     root.dataset.cursor = "Hold"; document.dispatchEvent(new CustomEvent("cursor:refresh")); // only now is there something to hold
-    sound.click();
+    sound.ack();
     gsap.to([ui.begin, ui.boot], { autoAlpha: 0, duration: 0.3, onComplete: () => { ui.begin.hidden = true; } });
     gsap.to(ui.ringWrap, { autoAlpha: 1, duration: 0.5 });
     // returning visitors who finished keep their photo and skip ahead

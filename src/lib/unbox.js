@@ -287,10 +287,10 @@ export async function initUnbox(stage) {
     // sound beats: only while opening, and re-armed once the box is shut again
     if (p < 0.01) Object.keys(beats).forEach((k) => (beats[k] = false));
     if (!opening) return;
-    if (lift > 0.05) beat("lift", () => sound.friction());
-    if (tip > 0.6) beat("off", () => sound.click());
-    if (open > 0.2) beat("tissue", () => sound.friction());
-    if (rise > 0.6) beat("tee", () => { sound.chord(); stage.dispatchEvent(new CustomEvent("unboxed")); });
+    if (lift > 0.05) beat("lift", () => sound.servo());
+    if (tip > 0.6) beat("off", () => sound.latch());
+    if (open > 0.2) beat("tissue", () => sound.servo(false));
+    if (rise > 0.6) beat("tee", () => { sound.granted(); stage.dispatchEvent(new CustomEvent("unboxed")); });
   }
 
   // drag up (or wheel/keys) to open; release keeps it where it is, past 90% it finishes
