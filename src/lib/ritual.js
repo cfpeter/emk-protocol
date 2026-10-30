@@ -16,23 +16,53 @@ const HOLD_SETTLE = 2.2; // seconds of stillness to settle the photo
 const HOLD_WORD = 1.7;   // seconds per word
 const JITTER = 14;       // px of movement that counts as "not still"
 
+// liquid gold: restless when you move, smooth and glowing when you are still
 const bgFrag = /* glsl */ `
-  uniform sampler2D uPhoto; uniform sampler2D uDepth; uniform vec2 uRes; uniform float uAspect;
-  uniform float uCalm; uniform float uTime; uniform float uDim; uniform float uSoft; varying vec2 vUv;
-  // cover-fit, framed on the print (u 0.64, 0.47 from the top) and clamped to the photo's edges
-  vec2 cover(vec2 uv) { float ca = uRes.x / uRes.y; vec2 s = ca > uAspect ? vec2(1.0, uAspect / ca) : vec2(ca / uAspect, 1.0);
-    vec2 o = clamp(vec2(0.64, 0.53) - s * 0.5, vec2(0.0), 1.0 - s); return uv * s + o; }
+  uniform vec2 uRes; uniform float uCalm; uniform float uTime; uniform float uDim; uniform float uSoft; varying vec2 vUv;
   void main() {
-    vec2 uv = cover(vUv);
-    float d = texture2D(uDepth, uv).r;
-    uv += vec2(sin(uTime * 0.6), cos(uTime * 0.5)) * (d - 0.6) * 0.004 * uCalm; // the photo breathes
-    // out of focus and dark until you are still, then it pulls into focus
+    vec2 uv = (gl_FragCoord.xy - 0.5 * uRes.xy) / uRes.y;
     float c = smoothstep(0.0, 1.0, uCalm);
-    // uSoft softens it again behind the words so the print never competes with them
-    vec3 soft = texture2D(uPhoto, uv, 7.0 * (1.0 - c) + uSoft).rgb;
-    vec3 col = soft * mix(0.16, uDim, c);
+    float t = uTime * mix(0.32, 0.07, c);             // fast and choppy -> slow and calm
+    float amp = mix(0.55, 0.32, c);
+    vec2 w = uv;
+    w.x += sin(uv.y * 2.5 + t * 0.9) * amp;
+    w.y += cos(uv.x * 2.5 - t * 0.7) * amp;
+    w.x += sin(uv.y * 1.2 - t * 0.5) * 0.25;
+    w.y += cos(uv.x * 1.2 + t * 0.8) * 0.25;
+    w += (1.0 - c) * 0.05 * vec2(sin(uv.y * 23.0 + uTime * 3.1), cos(uv.x * 19.0 - uTime * 2.7)); // the chop
+    float w1 = sin(dot(w, vec2(0.825, 0.565)) * 2.4 + t);
+    float w2 = cos(dot(w, vec2(0.765, -0.644)) * 3.2 - t * 1.4 + w1 * 0.4);
+    float w3 = sin(dot(w, vec2(0.362, 0.932)) * 4.0 + t * 1.8 + w2 * 0.5);
+    float f = w1 * 0.5 + w2 * 0.35 + w3 * 0.15;
+    float sharp = mix(3.0, 9.0, c);
+    float crest = pow(max(0.0, 1.0 - abs(f - 0.1)), 2.5) * 0.5 + pow(max(0.0, 1.0 - abs(f - 0.15)), sharp) * 0.9;
+    vec3 shadow = vec3(0.004, 0.003, 0.002);
+    vec3 body = vec3(0.045, 0.028, 0.011);
+    vec3 gold = vec3(0.52, 0.39, 0.22);
+    vec3 col = mix(shadow, body, smoothstep(-0.6, 0.6, f));
+    col += gold * crest * mix(0.55, 1.15, c);
+    // behind the words the gold settles down so the type always reads
+    col *= mix(0.32, 1.0, smoothstep(0.02, 0.8, uDim)) * (1.0 - uSoft * 0.12);
     col *= 1.0 - dot(vUv - 0.5, vUv - 0.5) * 0.9;
     gl_FragColor = vec4(col, 1.0);
+    #include <colorspace_fragment>
+  }`;
+// gold sparks drifting up; brighter as you calm down
+const sparkVert = /* glsl */ `
+  attribute vec3 aSeed; uniform float uTime; uniform float uCalm; uniform vec2 uView; uniform float uPx;
+  varying float vA;
+  void main() {
+    float speed = 18.0 + aSeed.y * 42.0;
+    float y = mod(aSeed.x * uView.y + uTime * speed, uView.y * 1.1) - uView.y * 0.55;
+    float x = (aSeed.z - 0.5) * uView.x + sin(uTime * 0.6 + aSeed.x * 20.0) * 18.0;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(x, y, 0.0, 1.0);
+    gl_PointSize = (1.4 + aSeed.y * 2.4) * uPx;
+    vA = (0.25 + 0.75 * uCalm) * (0.4 + 0.6 * sin(uTime * (1.0 + aSeed.y * 3.0) + aSeed.z * 30.0) * 0.5 + 0.5) * smoothstep(-0.55, -0.3, y / uView.y) * (1.0 - smoothstep(0.3, 0.55, y / uView.y));
+  }`;
+const sparkFrag = /* glsl */ `
+  varying float vA;
+  void main() { float a = smoothstep(0.5, 0.0, length(gl_PointCoord - 0.5));
+    gl_FragColor = vec4(1.0, 0.78, 0.45, a * a * vA * 0.7);
     #include <colorspace_fragment>
   }`;
 const ptsVert = /* glsl */ `
@@ -122,6 +152,7 @@ export async function initRitual(root) {
       if (i >= 3) {
         ui.doneId.textContent = getState().id || ensureId();
         ui.begin.hidden = true; ui.done.hidden = false; sound.chord();
+        root.dispatchEvent(new CustomEvent("protocol:complete"));
       } else ui.begin.textContent = "Next word";
     });
     return;
@@ -137,14 +168,20 @@ export async function initRitual(root) {
     document.fonts.load("600 100px Archivo", "PEACE"),
   ]).catch(() => {});
 
-  const loader = new THREE.TextureLoader();
-  const [photo, depth] = await Promise.all([loader.loadAsync("img/hero.webp"), loader.loadAsync("img/hero-depth.png")]);
-  photo.colorSpace = THREE.SRGBColorSpace;
-  const bgU = { uPhoto: { value: photo }, uDepth: { value: depth }, uRes: { value: new THREE.Vector2(1, 1) }, uAspect: { value: photo.image.width / photo.image.height }, uCalm: { value: 0 }, uTime: { value: 0 }, uDim: { value: 0.8 }, uSoft: { value: 0 } };
+  const bgU = { uRes: { value: new THREE.Vector2(1, 1) }, uCalm: { value: 0 }, uTime: { value: 0 }, uDim: { value: 0.8 }, uSoft: { value: 0 } };
   const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
     uniforms: bgU, vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }", fragmentShader: bgFrag, depthTest: false,
   }));
   bg.frustumCulled = false; scene.add(bg);
+
+  const SPARKS = matchMedia("(pointer: coarse)").matches ? 90 : 160;
+  const sGeo = new THREE.BufferGeometry();
+  const sSeed = new Float32Array(SPARKS * 3); for (let i = 0; i < sSeed.length; i++) sSeed[i] = Math.random();
+  sGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
+  sGeo.setAttribute("aSeed", new THREE.BufferAttribute(sSeed, 3));
+  const sparkU = { uTime: { value: 0 }, uCalm: { value: 0 }, uView: { value: new THREE.Vector2(1, 1) }, uPx: { value: renderer.getPixelRatio() } };
+  const sparks = new THREE.Points(sGeo, new THREE.ShaderMaterial({ uniforms: sparkU, vertexShader: sparkVert, fragmentShader: sparkFrag, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }));
+  sparks.frustumCulled = false; scene.add(sparks);
 
   const geo = new THREE.BufferGeometry();
   const seeds = new Float32Array(N); for (let i = 0; i < N; i++) seeds[i] = Math.random();
@@ -162,6 +199,7 @@ export async function initRitual(root) {
     renderer.setSize(W, H, false);
     camera.left = -W / 2; camera.right = W / 2; camera.top = H / 2; camera.bottom = -H / 2; camera.updateProjectionMatrix();
     bgU.uRes.value.set(W * renderer.getPixelRatio(), H * renderer.getPixelRatio());
+    sparkU.uView.value.set(W, H);
     points.position.y = -H * 0.17;
     // resampling reads 3 canvases back: only when the width changes, never for a phone's toolbar
     const width = Math.min(W * (W < 760 ? 0.9 : 0.5), 900);
@@ -203,6 +241,7 @@ export async function initRitual(root) {
 
   ui.begin.addEventListener("click", () => {
     ensureId();
+    root.dataset.cursor = "Hold"; document.dispatchEvent(new CustomEvent("cursor:refresh")); // only now is there something to hold
     sound.click();
     gsap.to([ui.begin, ui.boot], { autoAlpha: 0, duration: 0.3, onComplete: () => { ui.begin.hidden = true; } });
     gsap.to(ui.ringWrap, { autoAlpha: 1, duration: 0.5 });
@@ -242,6 +281,7 @@ export async function initRitual(root) {
     gsap.to(ptsU.uAlpha, { value: 0, duration: 1.2, ease: "power2.in" });
     delete root.dataset.cursor; // nothing left to hold
     document.dispatchEvent(new CustomEvent("cursor:refresh"));
+    root.dispatchEvent(new CustomEvent("protocol:complete")); // home opens the box next
   }
 
   // ---------- loop ----------
@@ -251,7 +291,7 @@ export async function initRitual(root) {
   new IntersectionObserver(([en]) => { visible = en.isIntersecting; }).observe(root);
   const setRing = (v) => { if (Math.abs(v - lastRing) > 0.002) { lastRing = v; ring(v); } };
   gsap.ticker.add((t, dms) => {
-    if (!visible || document.hidden) return;
+    if (!visible || document.hidden || root.dataset.paused) return; // paused once the box covers it
     const dt = Math.min(dms / 1000, 0.05);
     if (holding) { held += dt; stillTime += dt; }
     if (phase === "settle") {
@@ -278,9 +318,8 @@ export async function initRitual(root) {
       setRing(mix);
       if (mix > 0.97) lockWord();
     }
-    const still = phase === "boot" && !dirty; // nothing moves before Begin: don't redraw an unchanged frame
-    if (still) return;
     dirty = false;
+    sparkU.uTime.value = t; sparkU.uCalm.value = calm;
     bgU.uCalm.value = calm;
     bgU.uTime.value = t;
     ptsU.uTime.value = t;

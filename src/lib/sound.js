@@ -22,6 +22,7 @@ export function setSound(v) {
 }
 
 function startDrone() {
+  return; // no background drone: the owner heard it as a vacuum hum. Only short UI sounds play.
   if (!ensure() || drone) return;
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass"; filter.frequency.value = 420; filter.Q.value = 0.6;

@@ -15,13 +15,13 @@
 <body data-page="index" data-no-smooth="">
 <!-- @include header -->
 <main id="main">
-  <section class="ritual" tabindex="-1" aria-label="The Peace Protocol" data-cursor="Hold">
+  <section class="ritual" tabindex="-1" aria-label="The Peace Protocol">
     <img class="ritual-poster" src="img/hero.webp" alt="The Peace tee from behind on an LA rooftop, the skyline beyond" width="1320" height="1760">
     <canvas aria-hidden="true"></canvas>
     <div class="ritual-ui">
       <div>
         <h1 class="ritual-title head">Hold still.</h1>
-        <p class="ritual-prompt" data-prompt>EMK SYSTEM Peace Collection 001. Hold still and the shirt appears.</p>
+        <p class="ritual-prompt" data-prompt>EMK SYSTEM · Peace Collection 001. Calm the gold and your piece arrives.</p>
         <svg class="ritual-ring" viewBox="0 0 100 100" aria-hidden="true" style="opacity:0"><circle class="track" cx="50" cy="50" r="46"/><circle class="fill" cx="50" cy="50" r="46"/></svg>
         <button class="btn ritual-begin" type="button" data-begin>Begin</button>
         <p class="ritual-boot" data-boot aria-hidden="true">PEACE PROTOCOL › SERIES-001 › READY</p>
@@ -29,14 +29,24 @@
       <p class="ritual-say" data-say aria-live="polite"></p>
       <div class="ritual-done" data-done hidden>
         <p class="display">Protocol complete</p>
-        <p class="lead">Your access ID is <b data-done-id>PCE-····</b>. It stays with you on this phone.</p>
-        <p style="margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <a class="btn" href="series.html" data-vt>See Series 001</a>
-          <a class="btn btn-quiet" href="order.html#claim">Order by DM</a>
-        </p>
+        <p class="lead">Your access ID is <b data-done-id>PCE-····</b>. Your piece is ready.</p>
       </div>
       <span class="sr-only" aria-live="polite" data-live></span>
       <a class="ritual-skip link" href="#tee">Skip the ritual</a>
+    </div>
+    <div class="ritual-box" data-ritual-box hidden>
+      <canvas tabindex="0" role="img" aria-label="Your EMK SYSTEM box. Drag up or use the arrow keys to open it." data-cursor="Lift"></canvas>
+      <div class="rb-head">
+        <h2 class="head">Your piece is ready</h2>
+        <p class="lead muted" data-rb-hint>Drag up to lift the lid.</p>
+      </div>
+      <div class="rb-actions" data-rb-actions>
+        <button class="btn" type="button" data-rb-open>Open it for me</button>
+      </div>
+      <div class="rb-done" data-rb-done hidden>
+        <p class="lead">Access ID <b data-rb-id>PCE-····</b>, saved on this phone.</p>
+        <p class="rb-ctas"><a class="btn" href="series.html" data-vt>See Series 001</a><a class="btn btn-quiet" href="order.html#claim">Order by DM</a></p>
+      </div>
     </div>
   </section>
 

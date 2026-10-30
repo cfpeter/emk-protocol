@@ -5,7 +5,6 @@
 // One progress value (drag, wheel, keyboard or the button) drives the whole sequence.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { gsap } from "gsap";
 import * as sound from "./sound.js";
 import { whenNear } from "./near.js";
@@ -171,22 +170,15 @@ export async function initUnbox(stage) {
   slab(T, H, D - 2 * T, W / 2 - T / 2, H / 2, 0); slab(T, H, D - 2 * T, -W / 2 + T / 2, H / 2, 0);
   slab(W - 2 * T, 0.01, D - 2 * T, 0, T + 0.005, 0, inner);
 
-  // the folded tee: a real top-down photo of it (neck label, hang tag, chest label) across the
-  // fold's top face, with trilinear mipmaps and the GPU's full anisotropy for the grazing view
+  // inside: their real top-down photo of the tee folded in this box (neck label, hang tag,
+  // chest label, printed tissue), laid on the box floor so opening it looks into the real box
   const loader = new THREE.TextureLoader();
-  const printTex = await loader.loadAsync("img/folded.webp");
-  printTex.colorSpace = THREE.SRGBColorSpace;
-  printTex.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
-  printTex.minFilter = THREE.LinearMipmapLinearFilter; printTex.generateMipmaps = true;
-  const FOLD_W = 2.1, FOLD_D = FOLD_W / (printTex.image.width / printTex.image.height); // 1.35: the photo's own aspect
-  const fabric = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
-  const tee = new THREE.Group();
-  const fold = new THREE.Mesh(new RoundedBoxGeometry(FOLD_W, 0.2, FOLD_D, 4, 0.08), fabric);
-  tee.add(fold);
-  // the top face, inset to where the rounded edge starts to fall away (neck toward the back)
-  const print = new THREE.Mesh(new THREE.PlaneGeometry(FOLD_W - 0.07, FOLD_D - 0.07), new THREE.MeshStandardMaterial({ map: printTex, roughness: 0.88 }));
-  print.rotation.x = -Math.PI / 2; print.position.y = 0.1005; tee.add(print);
-  tee.position.set(0, T + 0.12, 0.02); base.add(tee);
+  const floorTex = await loader.loadAsync("img/box-floor.webp");
+  floorTex.colorSpace = THREE.SRGBColorSpace;
+  floorTex.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+  floorTex.minFilter = THREE.LinearMipmapLinearFilter; floorTex.generateMipmaps = true;
+  const tee = new THREE.Mesh(new THREE.PlaneGeometry(W - 2 * T, D - 2 * T), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.92, color: 0x8a8a8a, envMapIntensity: 0.4 }));
+  tee.rotation.x = -Math.PI / 2; tee.position.set(0, T + 0.012, 0); base.add(tee);
 
   // tissue: two flaps hinged at the long walls
   const tissueMat = new THREE.MeshStandardMaterial({ map: tissue(), roughness: 0.9, side: THREE.DoubleSide });
@@ -284,13 +276,13 @@ export async function initUnbox(stage) {
     // 3. tissue folds open over the walls
     const open = smoothstep(p, 0.62, 0.8);
     flapL.rotation.z = open * 2.25; flapR.rotation.z = -open * 2.25;
-    // 4. the tee lifts a little, print up
+    // 4. the reveal: the camera leans in and looks down into the box, the tee catches the light
     const rise = smoothstep(p, 0.8, 1);
-    tee.position.set(0, T + 0.12 + rise * 0.32, 0.02 + rise * 0.12); tee.rotation.x = -rise * 0.28;
-    // camera eases closer as the box opens
-    const r = (phone() ? 11 : 8.4) - p * (phone() ? 1.4 : 1.6);
-    camera.position.set(Math.sin(mx * 0.15) * r * 0.25 + r * 0.08, r * 0.62 + my * 0.2, r * 0.78);
-    look.set(0, 0.25 + p * 0.15, -0.15);
+    // camera eases closer as the box opens, then looks straight down into it
+    const r = (phone() ? 11 : 8.4) - p * (phone() ? 1.4 : 1.6) - rise * (phone() ? 2.2 : 2.0);
+    const down = 0.62 + rise * 0.3;
+    camera.position.set(Math.sin(mx * 0.15) * r * 0.25 + r * 0.08 * (1 - rise), r * down + my * 0.2, r * (0.78 - rise * 0.38));
+    look.set(0, 0.25 + p * 0.15 - rise * 0.3, -0.15 + rise * 0.15);
     camera.lookAt(look);
     // sound beats: only while opening, and re-armed once the box is shut again
     if (p < 0.01) Object.keys(beats).forEach((k) => (beats[k] = false));

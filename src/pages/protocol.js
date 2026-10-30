@@ -22,7 +22,12 @@ function trace(section) {
   const font = section.dataset.font, dir = section.dataset.dir || "ltr";
   const ctx = canvas.getContext("2d");
   const ink = document.createElement("canvas"), mask = document.createElement("canvas");
-  let W, H, dpr, pts = [], covered = 0, done = hasWord(key), last = null;
+  let W, H, dpr, pts = [], covered = 0, done = false, last = null;
+  const hint = section.querySelector(".trace-hint");
+  const skip = section.querySelector("[data-trace-skip]");
+  const firstHint = hint.textContent;
+  // already unlocked (in the home ritual, say)? it still starts blank so you can write it yourself
+  if (hasWord(key)) hint.textContent = "Already in your protocol. Trace it to write it again.";
 
   function layout() {
     dpr = Math.min(devicePixelRatio, 2);
@@ -41,7 +46,6 @@ function trace(section) {
     covered = 0;
     mask.getContext("2d").clearRect(0, 0, mask.width, mask.height);
     draw();
-    if (done) finish(true);
   }
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -64,22 +68,38 @@ function trace(section) {
     meter.style.transform = `scaleX(${Math.min(1, f / 0.62)})`;
     if (Math.random() < 0.25) sound.tick();
     draw();
-    if (f > 0.62) finish(false);
+    if (f > 0.62) finish();
   }
-  function finish(silent) {
+  function finish() {
     done = true;
     section.classList.add("done");
     meter.style.transform = "scaleX(1)";
     draw();
-    if (!silent) { unlockWord(key); sound.chime(Number(section.dataset.index)); sound.buzz(30); gsap.fromTo(canvas, { scale: 0.98 }, { scale: 1, duration: 0.8, ease: "expo.out" }); }
-    section.querySelector(".trace-hint").textContent = "Written. Added to your protocol.";
+    const isNew = unlockWord(key);
+    sound.chime(Number(section.dataset.index)); sound.buzz(30);
+    gsap.fromTo(canvas, { scale: 0.98 }, { scale: 1, duration: 0.8, ease: "expo.out" });
+    hint.textContent = isNew ? "Written. Added to your protocol." : "Written again. It is already in your protocol.";
+    skip.textContent = "Trace it again";
+    delete box.dataset.cursor; document.dispatchEvent(new CustomEvent("cursor:refresh"));
+  }
+  function reset() {
+    done = false; covered = 0; last = null;
+    pts.forEach((p) => (p.hit = false));
+    mask.getContext("2d").setTransform(1, 0, 0, 1, 0, 0);
+    mask.getContext("2d").clearRect(0, 0, mask.width, mask.height);
+    section.classList.remove("done");
+    meter.style.transform = "scaleX(0)";
+    hint.textContent = hasWord(key) ? "Trace it with your finger or the mouse." : firstHint;
+    skip.textContent = "Write it for me";
+    box.dataset.cursor = "Trace";
+    draw();
   }
   let drawing = false;
   const at = (e) => { const r = box.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   box.addEventListener("pointerdown", (e) => { if (done) return; drawing = true; last = null; box.setPointerCapture(e.pointerId); brush(...at(e)); });
   box.addEventListener("pointermove", (e) => drawing && !done && brush(...at(e)));
   box.addEventListener("pointerup", () => { drawing = false; last = null; });
-  section.querySelector("[data-trace-skip]")?.addEventListener("click", () => !done && finish(false));
+  skip.addEventListener("click", () => (done ? reset() : finish()));
   new ResizeObserver(layout).observe(box);
   document.fonts.ready.then(layout);
 }

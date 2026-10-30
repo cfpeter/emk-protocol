@@ -1,8 +1,14 @@
 import { gsap, ScrollTrigger, fine, reduce } from "../lib/ui.js";
 import { initRitual } from "../lib/ritual.js";
+import { initUnbox } from "../lib/unbox.js";
+import { getState, setFlag } from "../lib/state.js";
 
 export default async function home() {
-  initRitual(document.querySelector(".ritual"));
+  const ritual = document.querySelector(".ritual");
+  initRitual(ritual);
+
+  // the reward: once the protocol is complete, their box rises in and they open it
+  ritual.addEventListener("protocol:complete", () => setTimeout(() => revealBox(ritual), reduce ? 0 : 1700), { once: true });
 
   // the story: the back print wipes over to the chest label as you scroll
   const story = document.querySelector(".story");
@@ -27,4 +33,28 @@ export default async function home() {
       t.addEventListener("pointerleave", () => { rx(0); ry(0); });
     });
   }
+}
+
+async function revealBox(ritual) {
+  const el = ritual.querySelector("[data-ritual-box]");
+  const hint = el.querySelector("[data-rb-hint]");
+  const actions = el.querySelector("[data-rb-actions]");
+  const done = el.querySelector("[data-rb-done]");
+  el.querySelector("[data-rb-id]").textContent = getState().id || "";
+  el.hidden = false;
+  gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: reduce ? 0 : 1, ease: "power2.out", onComplete: () => { ritual.dataset.paused = "1"; } });
+  gsap.from(el.querySelectorAll(".rb-head > *, .rb-actions"), { autoAlpha: 0, y: 20, stagger: 0.1, duration: 0.9, ease: "expo.out", delay: 0.4 });
+  const showDone = () => {
+    setFlag("box");
+    hint.textContent = "Inside: the card, the seal, the PEACE sticker and your tee.";
+    actions.hidden = true;
+    gsap.to(el.querySelector(".rb-head"), { autoAlpha: 0, y: -12, duration: 0.6, ease: "power2.in" }); // the box interior speaks for itself
+    done.hidden = false;
+    gsap.from(done.children, { autoAlpha: 0, y: 16, stagger: 0.1, duration: 0.8, ease: "expo.out" });
+  };
+  const box = await initUnbox(el);
+  if (!box) { showDone(); return; } // no 3D available: go straight to the next steps
+  el.addEventListener("unboxed", showDone, { once: true });
+  el.querySelector("[data-rb-open]").addEventListener("click", () => box.openAll());
+  el.querySelector("canvas").focus({ preventScroll: true });
 }

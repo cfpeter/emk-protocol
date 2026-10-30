@@ -59,8 +59,10 @@ function menu() {
   const set = (v) => {
     open = v;
     btn.setAttribute("aria-expanded", String(v));
+    // the label rolls to the same word on hover; it only changes when the menu actually opens or closes
     label.textContent = v ? "Close" : "Menu";
-    label.dataset.copy = v ? "Menu" : "Close";
+    label.dataset.copy = label.textContent;
+    btn.classList.toggle("is-open", v);
     if (v) {
       nav.hidden = false;
       lenis?.stop();
