@@ -16,7 +16,7 @@ const FINISHES = {
   black: { base: 0x161514, lid: 0x161514, top: ["#0d0d0d", "#0d0d0d"], under: "#141414" },
   // contrast: a deep black lid top, gray walls so every edge reads crisp, and a stronger rim light
   // darker: deeper black everywhere; the contrast comes from strong edge light, not gray paint
-  darker: { base: 0x0b0b0c, lid: 0x0b0b0c, top: ["#040404", "#080808"], under: "#080808", rim: 5.5, key: 3.2 },
+  darker: { base: 0x090909, lid: 0x090909, top: ["#040404", "#070707"], under: "#070707", rim: 3.2, key: 2.2 },
   contrast: { base: 0x2f3033, lid: 0x2f3033, top: ["#070707", "#121212"], under: "#0c0c0c", rim: 3.6, key: 2.8 },
 };
 const FINISH = FINISHES[new URLSearchParams(location.search).get("box")] || FINISHES.darker; // ?box=black or ?box=contrast for the other finishes
