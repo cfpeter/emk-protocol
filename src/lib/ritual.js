@@ -36,10 +36,10 @@ const bgFrag = /* glsl */ `
     float f = w1 * 0.5 + w2 * 0.35 + w3 * 0.15;
     float sharp = mix(3.0, 9.0, c);
     float crest = pow(max(0.0, 1.0 - abs(f - 0.1)), 2.5) * 0.5 + pow(max(0.0, 1.0 - abs(f - 0.15)), sharp) * 0.9;
-    vec3 shadow = vec3(0.004, 0.003, 0.002);
+    vec3 deep = vec3(0.004, 0.003, 0.002);
     vec3 body = vec3(0.045, 0.028, 0.011);
     vec3 gold = vec3(0.52, 0.39, 0.22);
-    vec3 col = mix(shadow, body, smoothstep(-0.6, 0.6, f));
+    vec3 col = mix(deep, body, smoothstep(-0.6, 0.6, f));
     col += gold * crest * mix(0.55, 1.15, c);
     // behind the words the gold settles down so the type always reads
     col *= mix(0.32, 1.0, smoothstep(0.02, 0.8, uDim)) * (1.0 - uSoft * 0.12);
